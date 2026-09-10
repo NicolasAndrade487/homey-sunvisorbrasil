@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      documentos: {
+        Row: {
+          categoria: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          storage_path: string | null
+          tipo: string
+          titulo: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          storage_path?: string | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          storage_path?: string | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
