@@ -433,6 +433,8 @@ function Portal() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AcessosDialog aberto={acessosAberto} onFechar={() => setAcessosAberto(false)} />
     </div>
   );
 }
