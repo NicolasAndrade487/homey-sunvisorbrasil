@@ -54,6 +54,7 @@ import {
   formatarTamanho,
   type Documento,
 } from "@/lib/documentos";
+import { AcessosDialog } from "@/components/acessos-dialog";
 import logo from "@/assets/svb-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/portal")({
