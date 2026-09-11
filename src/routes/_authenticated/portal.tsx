@@ -187,6 +187,36 @@ function Portal() {
     navigate({ to: "/auth", replace: true });
   }
 
+  if (carregandoAcesso) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Verificando seu acesso...</p>
+      </div>
+    );
+  }
+
+  if (!aprovado) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
+        <img src={logo.url} alt="SVB" className="mb-8 h-11 w-auto brightness-0 invert" />
+        <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
+          <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
+          <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
+            Acesso aguardando liberação
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Sua conta <strong>{acesso?.email}</strong> foi criada, mas ainda não tem permissão para
+            ver os documentos. Fale com o responsável do portal para liberar seu acesso.
+          </p>
+          <Button variant="outline" className="mt-6 w-full" onClick={sair}>
+            Sair
+          </Button>
+        </div>
+        <p className="mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
