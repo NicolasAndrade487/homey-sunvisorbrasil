@@ -14,7 +14,7 @@ import {
 
 type Pessoa = {
   id: string;
-  nome: string | null;
+  display_name: string | null;
   email: string | null;
   aprovado: boolean;
   created_at: string;
@@ -35,7 +35,7 @@ export function AcessosDialog({
     queryFn: async (): Promise<Pessoa[]> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, nome, email, aprovado, created_at")
+        .select("id, display_name, email, aprovado, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Pessoa[];
@@ -87,7 +87,7 @@ export function AcessosDialog({
                       className="flex items-center gap-3 rounded-sm border border-l-[3px] border-border border-l-gold bg-card p-3"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">{p.nome || "Sem nome"}</p>
+                        <p className="truncate text-sm font-semibold">{p.display_name || "Sem nome"}</p>
                         <p className="truncate text-xs text-muted-foreground">{p.email}</p>
                       </div>
                       <Button
@@ -115,7 +115,7 @@ export function AcessosDialog({
                   >
                     <ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{p.nome || "Sem nome"}</p>
+                      <p className="truncate text-sm font-semibold">{p.display_name || "Sem nome"}</p>
                       <p className="truncate text-xs text-muted-foreground">{p.email}</p>
                     </div>
                     <Button
