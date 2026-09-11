@@ -6,3 +6,5 @@
 - [x] Cadastro, edição e remoção de documentos por qualquer funcionário logado
 - [x] Upload de PDF (até 50 MB) em armazenamento privado ou link externo
 - [ ] Publicar a aplicação (aguardando pedido do usuário)
+
+- [x] Acesso protegido: contas novas entram bloqueadas e precisam de liberacao de um responsavel
