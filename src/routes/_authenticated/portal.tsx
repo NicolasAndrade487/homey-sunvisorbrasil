@@ -252,6 +252,17 @@ function Portal() {
               <Plus className="h-4 w-4" />
               <span className="hidden sm:inline">Adicionar</span>
             </Button>
+            {acesso?.admin ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setAcessosAberto(true)}
+                title="Quem pode entrar"
+                className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </Button>
+            ) : null}
             <Button
               variant="ghost"
               size="icon"
