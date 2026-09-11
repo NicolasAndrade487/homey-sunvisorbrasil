@@ -95,11 +95,33 @@ function Portal() {
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
   const [modalAberto, setModalAberto] = useState(false);
+  const [acessosAberto, setAcessosAberto] = useState(false);
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
 
+  const { data: acesso, isLoading: carregandoAcesso } = useQuery({
+    queryKey: ["meu-acesso"],
+    queryFn: async () => {
+      const { data: sessao } = await supabase.auth.getUser();
+      const uid = sessao.user?.id;
+      if (!uid) return { aprovado: false, admin: false, email: null as string | null };
+      const [{ data: perfil }, { data: papeis }] = await Promise.all([
+        supabase.from("profiles").select("aprovado, email").eq("id", uid).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", uid),
+      ]);
+      return {
+        aprovado: Boolean(perfil?.aprovado),
+        admin: Boolean(papeis?.some((p) => p.role === "admin")),
+        email: perfil?.email ?? sessao.user?.email ?? null,
+      };
+    },
+  });
+
+  const aprovado = Boolean(acesso?.aprovado);
+
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ["documentos"],
+    enabled: aprovado,
     queryFn: async (): Promise<Documento[]> => {
       const { data, error } = await supabase
         .from("documentos")
