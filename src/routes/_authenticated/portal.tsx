@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   BadgeCheck,
@@ -112,13 +112,13 @@ function Portal() {
           admin: false,
           email: email ?? null,
         };
-      const [{ data: perfil }, { data: papeis }] = await Promise.all([
+      const [{ data: perfil }, { data: papeis, error: erroPapeis }] = await Promise.all([
         supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
       const emailNormalizado = (perfil?.email ?? email ?? "").toLowerCase();
       const admin =
-        Boolean(papeis?.some((p) => p.role === "admin")) ||
+        (!erroPapeis && Boolean(papeis?.some((p) => p.role === "admin"))) ||
         emailNormalizado === ADMIN_EMAIL;
       const status = perfil?.status ?? (admin ? "aprovado" : "pendente");
       const aprovado = Boolean(perfil?.aprovado || status === "aprovado" || admin);
@@ -486,8 +486,15 @@ function FormularioDocumento({
   const inputArquivo = useRef<HTMLInputElement>(null);
   const idCarregado = useRef<string | null>(null);
 
-  const chave = documento?.id ?? "novo";
-  if (aberto && idCarregado.current !== chave) {
+  useEffect(() => {
+    if (!aberto) {
+      idCarregado.current = null;
+      return;
+    }
+
+    const chave = documento?.id ?? "novo";
+    if (idCarregado.current === chave) return;
+
     idCarregado.current = chave;
     setTitulo(documento?.titulo ?? "");
     setCategoria(documento?.categoria ?? CATEGORIAS[0]);
@@ -495,8 +502,7 @@ function FormularioDocumento({
     setUrl(documento?.url ?? "");
     setArquivo(null);
     setModo(documento?.tipo === "link" ? "link" : "upload");
-  }
-  if (!aberto && idCarregado.current !== null) idCarregado.current = null;
+  }, [aberto, documento]);
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();

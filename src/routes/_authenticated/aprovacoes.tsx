@@ -58,7 +58,8 @@ function Aprovacoes() {
       const uid = sessao.user?.id;
       const email = (sessao.user?.email ?? "").toLowerCase();
       if (!uid) return false;
-      const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", uid);
+      if (error) return email === ADMIN_EMAIL;
       return Boolean(data?.some((p) => p.role === "admin") || email === ADMIN_EMAIL);
     },
   });
