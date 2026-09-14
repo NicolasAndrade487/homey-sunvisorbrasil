@@ -55,8 +55,7 @@ import {
   type Documento,
 } from "@/lib/documentos";
 
-import logo from "@/assets/svb-logo.png";
-
+import logo from "@/assets/svb-logo.png.asset.json";
 export const Route = createFileRoute("/_authenticated/portal")({
   head: () => ({
     meta: [
