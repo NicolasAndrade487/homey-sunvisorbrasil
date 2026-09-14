@@ -63,7 +63,7 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF lower(split_part(COALESCE(NEW.email, ''), '@', 2)) <> 'sunvisorbrasil.com' THEN
+  IF lower(split_part(COALESCE(NEW.email, ''), '@', 2)) NOT IN ('sunvisorbrasil.com.br', 'sunvisorbrasil.com') THEN
     RAISE EXCEPTION 'EMAIL_DOMINIO_NAO_AUTORIZADO';
   END IF;
 

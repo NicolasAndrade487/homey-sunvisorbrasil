@@ -78,5 +78,5 @@ USING (bucket_id = 'documentos');
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'admin'
 FROM auth.users
-WHERE email = 'admin@sunvisorbrasil.com'
+WHERE lower(email) IN ('admin@sunvisorbrasil.com.br', 'admin@sunvisorbrasil.com')
 ON CONFLICT (user_id, role) DO NOTHING;

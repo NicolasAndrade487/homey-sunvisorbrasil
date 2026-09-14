@@ -87,7 +87,7 @@ const ICONES: Record<string, typeof FileText> = {
 };
 
 const LIMITE_BYTES = 50 * 1024 * 1024;
-const ADMIN_EMAIL = "admin@sunvisorbrasil.com";
+const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
 
 function Portal() {
   const navigate = useNavigate();
@@ -119,7 +119,7 @@ function Portal() {
       const emailNormalizado = (perfil?.email ?? email ?? "").toLowerCase();
       const admin =
         (!erroPapeis && Boolean(papeis?.some((p) => p.role === "admin"))) ||
-        emailNormalizado === ADMIN_EMAIL;
+        ADMIN_EMAILS.includes(emailNormalizado as (typeof ADMIN_EMAILS)[number]);
       const status = perfil?.status ?? (admin ? "aprovado" : "pendente");
       const aprovado = Boolean(perfil?.aprovado || status === "aprovado" || admin);
 

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/svb-logo.png.asset.json";
 
 type Status = "pendente" | "aprovado" | "recusado";
-const ADMIN_EMAIL = "admin@sunvisorbrasil.com";
+const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
 
 type Pessoa = {
   id: string;
@@ -59,8 +59,11 @@ function Aprovacoes() {
       const email = (sessao.user?.email ?? "").toLowerCase();
       if (!uid) return false;
       const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-      if (error) return email === ADMIN_EMAIL;
-      return Boolean(data?.some((p) => p.role === "admin") || email === ADMIN_EMAIL);
+      if (error) return ADMIN_EMAILS.includes(email as (typeof ADMIN_EMAILS)[number]);
+      return Boolean(
+        data?.some((p) => p.role === "admin") ||
+          ADMIN_EMAILS.includes(email as (typeof ADMIN_EMAILS)[number]),
+      );
     },
   });
 

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import logo from "@/assets/svb-logo.png.asset.json";
 
-const DOMINIO = "sunvisorbrasil.com";
+const DOMINIOS = ["sunvisorbrasil.com.br", "sunvisorbrasil.com"] as const;
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -49,8 +49,10 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim().toLowerCase().endsWith(`@${DOMINIO}`)) {
-      toast.error(`Use seu email @${DOMINIO}.`);
+    const emailNormalizado = email.trim().toLowerCase();
+    const dominioValido = DOMINIOS.some((dominio) => emailNormalizado.endsWith(`@${dominio}`));
+    if (!dominioValido) {
+      toast.error("Use seu email da empresa (ex: nome@sunvisorbrasil.com.br).");
       return;
     }
     setEnviando(true);
