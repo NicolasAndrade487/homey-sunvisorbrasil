@@ -55,7 +55,7 @@ import {
   type Documento,
 } from "@/lib/documentos";
 
-import logo from "@/assets/svb-logo.png.asset.json";
+import logo from "@/assets/svb-logo.png";
 
 export const Route = createFileRoute("/_authenticated/portal")({
   head: () => ({
@@ -115,10 +115,14 @@ function Portal() {
         supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
+      const admin = Boolean(papeis?.some((p) => p.role === "admin"));
+      const status = perfil?.status ?? "pendente";
+      const aprovado = Boolean(perfil?.aprovado || status === "aprovado" || admin);
+
       return {
-        aprovado: Boolean(perfil?.aprovado),
-        status: perfil?.status ?? "pendente",
-        admin: Boolean(papeis?.some((p) => p.role === "admin")),
+        aprovado,
+        status,
+        admin,
         email: perfil?.email ?? sessao.user?.email ?? null,
       };
     },
