@@ -254,13 +254,15 @@ function Portal() {
             </Button>
             {acesso?.admin ? (
               <Button
+                asChild
                 variant="ghost"
                 size="icon"
-                onClick={() => setAcessosAberto(true)}
-                title="Quem pode entrar"
+                title="Liberação de acessos"
                 className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
               >
-                <ShieldCheck className="h-4 w-4" />
+                <Link to="/aprovacoes">
+                  <ShieldCheck className="h-4 w-4" />
+                </Link>
               </Button>
             ) : null}
             <Button
