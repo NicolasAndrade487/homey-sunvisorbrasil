@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -54,7 +54,7 @@ import {
   formatarTamanho,
   type Documento,
 } from "@/lib/documentos";
-import { AcessosDialog } from "@/components/acessos-dialog";
+
 import logo from "@/assets/svb-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/portal")({
@@ -95,7 +95,7 @@ function Portal() {
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
   const [modalAberto, setModalAberto] = useState(false);
-  const [acessosAberto, setAcessosAberto] = useState(false);
+  
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
 
@@ -104,13 +104,20 @@ function Portal() {
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
-      if (!uid) return { aprovado: false, admin: false, email: null as string | null };
+      if (!uid)
+        return {
+          aprovado: false,
+          status: "pendente",
+          admin: false,
+          email: null as string | null,
+        };
       const [{ data: perfil }, { data: papeis }] = await Promise.all([
-        supabase.from("profiles").select("aprovado, email").eq("id", uid).maybeSingle(),
+        supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
       return {
         aprovado: Boolean(perfil?.aprovado),
+        status: perfil?.status ?? "pendente",
         admin: Boolean(papeis?.some((p) => p.role === "admin")),
         email: perfil?.email ?? sessao.user?.email ?? null,
       };
@@ -436,7 +443,7 @@ function Portal() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AcessosDialog aberto={acessosAberto} onFechar={() => setAcessosAberto(false)} />
+      
     </div>
   );
 }
