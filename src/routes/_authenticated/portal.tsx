@@ -571,7 +571,10 @@ function FormularioDocumento({
       }
       onSalvo();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível salvar.");
+      const mensagem =
+        err instanceof Error ? err.message : "Não foi possível salvar.";
+      console.error("Salvar documento falhou:", err);
+      toast.error(mensagem);
     } finally {
       setSalvando(false);
     }
