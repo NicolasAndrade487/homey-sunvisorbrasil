@@ -15,15 +15,18 @@ GRANT SELECT, INSERT, UPDATE ON public.profiles TO authenticated;
 GRANT ALL ON public.profiles TO service_role;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "profiles_select_authenticated"
+DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
+CREATE POLICY "profiles_select_authenticated"
 ON public.profiles FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY IF NOT EXISTS "profiles_update_own"
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own"
 ON public.profiles FOR UPDATE TO authenticated
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
 
-CREATE POLICY IF NOT EXISTS "profiles_insert_own"
+DROP POLICY IF EXISTS "profiles_insert_own" ON public.profiles;
+CREATE POLICY "profiles_insert_own"
 ON public.profiles FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = id);
 
@@ -75,19 +78,23 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.documentos TO authenticated;
 GRANT ALL ON public.documentos TO service_role;
 ALTER TABLE public.documentos ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "documentos_select_authenticated"
+DROP POLICY IF EXISTS "documentos_select_authenticated" ON public.documentos;
+CREATE POLICY "documentos_select_authenticated"
 ON public.documentos FOR SELECT TO authenticated USING (true);
 
-CREATE POLICY IF NOT EXISTS "documentos_insert_authenticated"
+DROP POLICY IF EXISTS "documentos_insert_authenticated" ON public.documentos;
+CREATE POLICY "documentos_insert_authenticated"
 ON public.documentos FOR INSERT TO authenticated
 WITH CHECK (auth.uid() = created_by);
 
-CREATE POLICY IF NOT EXISTS "documentos_update_authenticated"
+DROP POLICY IF EXISTS "documentos_update_authenticated" ON public.documentos;
+CREATE POLICY "documentos_update_authenticated"
 ON public.documentos FOR UPDATE TO authenticated
 USING (true)
 WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "documentos_delete_authenticated"
+DROP POLICY IF EXISTS "documentos_delete_authenticated" ON public.documentos;
+CREATE POLICY "documentos_delete_authenticated"
 ON public.documentos FOR DELETE TO authenticated USING (true);
 
 CREATE INDEX IF NOT EXISTS documentos_categoria_idx ON public.documentos (categoria);
@@ -109,17 +116,21 @@ CREATE TRIGGER documentos_set_updated_at
 BEFORE UPDATE ON public.documentos
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE POLICY IF NOT EXISTS "documentos_files_select"
+DROP POLICY IF EXISTS "documentos_files_select" ON storage.objects;
+CREATE POLICY "documentos_files_select"
 ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'documentos');
 
-CREATE POLICY IF NOT EXISTS "documentos_files_insert"
+DROP POLICY IF EXISTS "documentos_files_insert" ON storage.objects;
+CREATE POLICY "documentos_files_insert"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (bucket_id = 'documentos');
 
-CREATE POLICY IF NOT EXISTS "documentos_files_update"
+DROP POLICY IF EXISTS "documentos_files_update" ON storage.objects;
+CREATE POLICY "documentos_files_update"
 ON storage.objects FOR UPDATE TO authenticated
 USING (bucket_id = 'documentos');
 
-CREATE POLICY IF NOT EXISTS "documentos_files_delete"
+DROP POLICY IF EXISTS "documentos_files_delete" ON storage.objects;
+CREATE POLICY "documentos_files_delete"
 ON storage.objects FOR DELETE TO authenticated
 USING (bucket_id = 'documentos');
