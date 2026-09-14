@@ -209,11 +209,20 @@ function Portal() {
         <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
           <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
           <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
-            Acesso aguardando liberação
+            {acesso?.status === "recusado" ? "Acesso recusado" : "Acesso aguardando liberação"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta <strong>{acesso?.email}</strong> foi criada, mas ainda não tem permissão para
-            ver os documentos. Fale com o responsável do portal para liberar seu acesso.
+            {acesso?.status === "recusado" ? (
+              <>
+                O pedido de acesso da conta <strong>{acesso?.email}</strong> foi recusado pelo
+                responsável do portal. Se isso foi um engano, fale com ele.
+              </>
+            ) : (
+              <>
+                Sua conta <strong>{acesso?.email}</strong> foi criada, mas ainda não tem permissão
+                para ver os documentos. Fale com o responsável do portal para liberar seu acesso.
+              </>
+            )}
           </p>
           <Button variant="outline" className="mt-6 w-full" onClick={sair}>
             Sair
