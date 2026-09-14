@@ -65,27 +65,36 @@ export type Database = {
           aprovado_em: string | null
           aprovado_por: string | null
           created_at: string
+          decidido_em: string | null
+          decidido_por: string | null
           display_name: string | null
           email: string | null
           id: string
+          status: string
         }
         Insert: {
           aprovado?: boolean
           aprovado_em?: string | null
           aprovado_por?: string | null
           created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
           display_name?: string | null
           email?: string | null
           id: string
+          status?: string
         }
         Update: {
           aprovado?: boolean
           aprovado_em?: string | null
           aprovado_por?: string | null
           created_at?: string
+          decidido_em?: string | null
+          decidido_por?: string | null
           display_name?: string | null
           email?: string | null
           id?: string
+          status?: string
         }
         Relationships: []
       }

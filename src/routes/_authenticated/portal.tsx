@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -54,7 +54,7 @@ import {
   formatarTamanho,
   type Documento,
 } from "@/lib/documentos";
-import { AcessosDialog } from "@/components/acessos-dialog";
+
 import logo from "@/assets/svb-logo.png.asset.json";
 
 export const Route = createFileRoute("/_authenticated/portal")({
@@ -95,7 +95,7 @@ function Portal() {
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
   const [modalAberto, setModalAberto] = useState(false);
-  const [acessosAberto, setAcessosAberto] = useState(false);
+  
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
 
@@ -104,13 +104,20 @@ function Portal() {
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
-      if (!uid) return { aprovado: false, admin: false, email: null as string | null };
+      if (!uid)
+        return {
+          aprovado: false,
+          status: "pendente",
+          admin: false,
+          email: null as string | null,
+        };
       const [{ data: perfil }, { data: papeis }] = await Promise.all([
-        supabase.from("profiles").select("aprovado, email").eq("id", uid).maybeSingle(),
+        supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
       return {
         aprovado: Boolean(perfil?.aprovado),
+        status: perfil?.status ?? "pendente",
         admin: Boolean(papeis?.some((p) => p.role === "admin")),
         email: perfil?.email ?? sessao.user?.email ?? null,
       };
@@ -202,11 +209,20 @@ function Portal() {
         <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
           <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
           <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
-            Acesso aguardando liberação
+            {acesso?.status === "recusado" ? "Acesso recusado" : "Acesso aguardando liberação"}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sua conta <strong>{acesso?.email}</strong> foi criada, mas ainda não tem permissão para
-            ver os documentos. Fale com o responsável do portal para liberar seu acesso.
+            {acesso?.status === "recusado" ? (
+              <>
+                O pedido de acesso da conta <strong>{acesso?.email}</strong> foi recusado pelo
+                responsável do portal. Se isso foi um engano, fale com ele.
+              </>
+            ) : (
+              <>
+                Sua conta <strong>{acesso?.email}</strong> foi criada, mas ainda não tem permissão
+                para ver os documentos. Fale com o responsável do portal para liberar seu acesso.
+              </>
+            )}
           </p>
           <Button variant="outline" className="mt-6 w-full" onClick={sair}>
             Sair
@@ -254,13 +270,15 @@ function Portal() {
             </Button>
             {acesso?.admin ? (
               <Button
+                asChild
                 variant="ghost"
                 size="icon"
-                onClick={() => setAcessosAberto(true)}
-                title="Quem pode entrar"
+                title="Liberação de acessos"
                 className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
               >
-                <ShieldCheck className="h-4 w-4" />
+                <Link to="/aprovacoes">
+                  <ShieldCheck className="h-4 w-4" />
+                </Link>
               </Button>
             ) : null}
             <Button
@@ -434,7 +452,7 @@ function Portal() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AcessosDialog aberto={acessosAberto} onFechar={() => setAcessosAberto(false)} />
+      
     </div>
   );
 }
