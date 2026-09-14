@@ -4,7 +4,12 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS decidido_em timestamptz,
   ADD COLUMN IF NOT EXISTS decidido_por uuid;
 
-UPDATE public.profiles SET status = 'aprovado' WHERE aprovado;
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS aprovado boolean NOT NULL DEFAULT false;
+
+UPDATE public.profiles
+SET status = 'aprovado'
+WHERE aprovado IS TRUE;
 
 -- 2. Sincroniza status <-> aprovado nos dois sentidos
 CREATE OR REPLACE FUNCTION public.sync_status_aprovado()
@@ -16,6 +21,7 @@ BEGIN
   IF NEW.status NOT IN ('pendente','aprovado','recusado') THEN
     RAISE EXCEPTION 'status invalido: %', NEW.status;
   END IF;
+
   IF TG_OP = 'UPDATE' AND NEW.status IS DISTINCT FROM OLD.status THEN
     NEW.aprovado := (NEW.status = 'aprovado');
   ELSIF TG_OP = 'UPDATE' AND NEW.aprovado IS DISTINCT FROM OLD.aprovado THEN
@@ -23,6 +29,7 @@ BEGIN
   ELSE
     NEW.aprovado := (NEW.status = 'aprovado');
   END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -41,9 +48,10 @@ LANGUAGE sql
 STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
-  select exists (
-    select 1 from public.profiles
-    where id = _user_id and aprovado and status = 'aprovado'
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = _user_id AND aprovado AND status = 'aprovado'
   )
 $$;
 
@@ -67,6 +75,7 @@ BEGIN
     'pendente'
   )
   ON CONFLICT (id) DO NOTHING;
+
   RETURN NEW;
 END;
 $$;
