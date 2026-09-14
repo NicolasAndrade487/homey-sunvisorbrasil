@@ -87,6 +87,7 @@ const ICONES: Record<string, typeof FileText> = {
 };
 
 const LIMITE_BYTES = 50 * 1024 * 1024;
+const ADMIN_EMAIL = "admin@sunvisorbrasil.com";
 
 function Portal() {
   const navigate = useNavigate();
@@ -103,26 +104,30 @@ function Portal() {
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
+      const email = sessao.user?.email ?? null;
       if (!uid)
         return {
           aprovado: false,
           status: "pendente",
           admin: false,
-          email: null as string | null,
+          email: email ?? null,
         };
       const [{ data: perfil }, { data: papeis }] = await Promise.all([
         supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
-      const admin = Boolean(papeis?.some((p) => p.role === "admin"));
-      const status = perfil?.status ?? "pendente";
+      const emailNormalizado = (perfil?.email ?? email ?? "").toLowerCase();
+      const admin =
+        Boolean(papeis?.some((p) => p.role === "admin")) ||
+        emailNormalizado === ADMIN_EMAIL;
+      const status = perfil?.status ?? (admin ? "aprovado" : "pendente");
       const aprovado = Boolean(perfil?.aprovado || status === "aprovado" || admin);
 
       return {
         aprovado,
         status,
         admin,
-        email: perfil?.email ?? sessao.user?.email ?? null,
+        email: perfil?.email ?? email ?? null,
       };
     },
   });

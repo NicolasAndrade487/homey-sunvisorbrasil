@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/svb-logo.png.asset.json";
 
 type Status = "pendente" | "aprovado" | "recusado";
+const ADMIN_EMAIL = "admin@sunvisorbrasil.com";
 
 type Pessoa = {
   id: string;
@@ -55,9 +56,10 @@ function Aprovacoes() {
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
+      const email = (sessao.user?.email ?? "").toLowerCase();
       if (!uid) return false;
       const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-      return Boolean(data?.some((p) => p.role === "admin"));
+      return Boolean(data?.some((p) => p.role === "admin") || email === ADMIN_EMAIL);
     },
   });
 
