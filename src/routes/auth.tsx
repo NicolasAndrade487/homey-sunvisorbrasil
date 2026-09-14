@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,6 +47,10 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!email.trim().toLowerCase().endsWith(`@${DOMINIO}`)) {
+      toast.error(`Use seu email @${DOMINIO}.`);
+      return;
+    }
     setEnviando(true);
     try {
       if (modo === "entrar") {
@@ -76,24 +80,15 @@ function AuthPage() {
           ? "Email ou senha incorretos."
           : msg.includes("already registered")
             ? "Esse email já tem cadastro. Use a opção Entrar."
-            : msg,
+            : msg.includes("EMAIL_DOMINIO_NAO_AUTORIZADO")
+              ? `Somente emails @${DOMINIO} podem criar acesso.`
+              : msg,
       );
     } finally {
       setEnviando(false);
     }
   }
 
-  async function handleGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      toast.error("Não foi possível entrar com o Google.");
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/portal", replace: true });
-  }
 
   if (aguardandoEmail) {
     return (
@@ -171,15 +166,6 @@ function AuthPage() {
         </Button>
       </form>
 
-      <div className="my-5 flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-xs uppercase tracking-wide text-muted-foreground">ou</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      <Button variant="outline" className="w-full" onClick={handleGoogle}>
-        Continuar com Google
-      </Button>
 
       <button
         type="button"
