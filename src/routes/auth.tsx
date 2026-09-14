@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import logo from "@/assets/svb-logo.png.asset.json";
 
+const DOMINIO = "sunvisorbrasil.com";
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   head: () => ({
