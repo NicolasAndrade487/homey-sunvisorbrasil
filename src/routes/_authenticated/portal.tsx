@@ -55,7 +55,6 @@ import {
   type Documento,
 } from "@/lib/documentos";
 
-import logo from "@/assets/svb-logo.png.png";
 export const Route = createFileRoute("/_authenticated/portal")({
   head: () => ({
     meta: [
@@ -213,7 +212,9 @@ function Portal() {
   if (!aprovado) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-        <img src={logo} alt="SVB" className="mb-8 h-11 w-auto brightness-0 invert" />
+        <div className="mb-8 font-display text-5xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
+          SVB
+        </div>
         <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
           <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
           <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
@@ -246,7 +247,9 @@ function Portal() {
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-5">
           <div className="flex flex-shrink-0 items-center gap-4">
-            <img src={logo} alt="SVB" className="h-10 w-auto brightness-0 invert" />
+            <div className="font-display text-4xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
+              SVB
+            </div>
             <span className="hidden h-8 w-px bg-primary-foreground/25 sm:block" />
             <div className="hidden font-display text-sm leading-tight text-primary-foreground/70 sm:block">
               <strong className="block text-base font-semibold text-primary-foreground">
