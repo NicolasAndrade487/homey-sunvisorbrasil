@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Clock, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Mail, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,21 @@ function Aprovacoes() {
     queryClient.invalidateQueries({ queryKey: ["acessos"] });
   }
 
+  async function enviarRedefinicao(pessoa: Pessoa) {
+    if (!pessoa.email) {
+      toast.error("Esse usuário não possui email cadastrado.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(pessoa.email, {
+      redirectTo: window.location.origin + "/auth",
+    });
+    if (error) {
+      toast.error("Não foi possível enviar o email de redefinição.");
+      return;
+    }
+    toast.success("Email de redefinição enviado.");
+  }
+
   if (verificando) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -179,6 +194,13 @@ function Aprovacoes() {
                   >
                     <Check className="h-4 w-4" /> Aprovar
                   </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void enviarRedefinicao(p)}
+                    >
+                      <Mail className="h-4 w-4" /> Redefinir senha
+                    </Button>
                   <Button
                     size="sm"
                     variant="ghost"
@@ -197,14 +219,23 @@ function Aprovacoes() {
               itens={liberados}
               icone={<ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />}
               acoes={(p) => (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-destructive"
-                  onClick={() => void definir(p, "pendente")}
-                >
-                  <X className="h-4 w-4" /> Bloquear
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void enviarRedefinicao(p)}
+                  >
+                    <Mail className="h-4 w-4" /> Redefinir senha
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-destructive"
+                    onClick={() => void definir(p, "pendente")}
+                  >
+                    <X className="h-4 w-4" /> Bloquear
+                  </Button>
+                </div>
               )}
             />
 

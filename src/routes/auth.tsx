@@ -37,14 +37,61 @@ function AuthPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [aguardandoEmail, setAguardandoEmail] = useState(false);
+  const [recuperando, setRecuperando] = useState(() =>
+    typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
+  );
+  const [emailEnviado, setEmailEnviado] = useState(false);
+  const [solicitandoRedefinicao, setSolicitandoRedefinicao] = useState(false);
 
   useEffect(() => {
+    let montado = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/portal", replace: true });
+      if (montado && data.session && !recuperando) navigate({ to: "/portal", replace: true });
     });
-  }, [navigate]);
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setRecuperando(true);
+    });
+    return () => {
+      montado = false;
+      data.subscription.unsubscribe();
+    };
+  }, [navigate, recuperando]);
+
+  async function solicitarRedefinicao(e: React.FormEvent) {
+    e.preventDefault();
+    setEnviando(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+      redirectTo: window.location.origin + "/auth",
+    });
+    setEnviando(false);
+    if (error) {
+      toast.error("Não foi possível enviar o email de recuperação.");
+      return;
+    }
+    setEmailEnviado(true);
+  }
+
+  async function atualizarSenha(e: React.FormEvent) {
+    e.preventDefault();
+    if (novaSenha.length < 6) {
+      toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+      return;
+    }
+    setEnviando(true);
+    const { error } = await supabase.auth.updateUser({ password: novaSenha });
+    setEnviando(false);
+    if (error) {
+      toast.error("Não foi possível atualizar a senha.");
+      return;
+    }
+    toast.success("Senha atualizada. Você já pode entrar no portal.");
+    setRecuperando(false);
+    setNovaSenha("");
+    await supabase.auth.signOut();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -119,6 +166,82 @@ function AuthPage() {
     );
   }
 
+  if (recuperando) {
+    return (
+      <Shell>
+        <h1 className="font-display text-xl font-semibold text-card-foreground">Nova senha</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Escolha uma nova senha para acessar o portal.
+        </p>
+        <form onSubmit={atualizarSenha} className="mt-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="nova-senha">Nova senha</Label>
+            <Input
+              id="nova-senha"
+              type="password"
+              required
+              minLength={6}
+              value={novaSenha}
+              onChange={(e) => setNovaSenha(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+          <Button type="submit" className="w-full font-semibold" disabled={enviando}>
+            {enviando ? "Atualizando..." : "Atualizar senha"}
+          </Button>
+        </form>
+      </Shell>
+    );
+  }
+
+  if (emailEnviado) {
+    return (
+      <Shell>
+        <h1 className="font-display text-xl font-semibold text-card-foreground">Email enviado</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Confira sua caixa de entrada e use o link para criar uma nova senha.
+        </p>
+        <Button variant="outline" className="mt-6 w-full" onClick={() => setEmailEnviado(false)}>
+          Voltar para o login
+        </Button>
+      </Shell>
+    );
+  }
+
+  if (solicitandoRedefinicao) {
+    return (
+      <Shell>
+        <h1 className="font-display text-xl font-semibold text-card-foreground">Redefinir senha</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Enviaremos um link para o email cadastrado.
+        </p>
+        <form onSubmit={solicitarRedefinicao} className="mt-6 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email-recuperacao">Email da empresa</Label>
+            <Input
+              id="email-recuperacao"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+          </div>
+          <Button type="submit" className="w-full font-semibold" disabled={enviando}>
+            {enviando ? "Enviando..." : "Enviar link"}
+          </Button>
+        </form>
+        <Button
+          variant="ghost"
+          className="mt-3 w-full"
+          onClick={() => setSolicitandoRedefinicao(false)}
+        >
+          Voltar para o login
+        </Button>
+      </Shell>
+    );
+  }
+
   return (
     <Shell>
       <h1 className="font-display text-xl font-semibold text-card-foreground">
@@ -171,6 +294,15 @@ function AuthPage() {
         </Button>
       </form>
 
+      {modo === "entrar" && (
+        <button
+          type="button"
+          className="mt-4 w-full text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          onClick={() => setSolicitandoRedefinicao(true)}
+        >
+          Esqueci minha senha
+        </button>
+      )}
 
       <button
         type="button"
