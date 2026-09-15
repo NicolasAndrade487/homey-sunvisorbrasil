@@ -62,13 +62,18 @@ function AuthPage() {
 
   async function solicitarRedefinicao(e: React.FormEvent) {
     e.preventDefault();
+    const emailNormalizado = email.trim().toLowerCase();
+    if (!emailNormalizado) {
+      toast.error("Informe o email da empresa.");
+      return;
+    }
     setEnviando(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    const { error } = await supabase.auth.resetPasswordForEmail(emailNormalizado, {
       redirectTo: window.location.origin + "/auth",
     });
     setEnviando(false);
     if (error) {
-      toast.error("Não foi possível enviar o email de recuperação.");
+      toast.error(`Não foi possível enviar: ${error.message}`);
       return;
     }
     setEmailEnviado(true);

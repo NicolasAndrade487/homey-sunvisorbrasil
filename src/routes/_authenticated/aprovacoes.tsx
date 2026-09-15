@@ -117,7 +117,7 @@ function Aprovacoes() {
       redirectTo: window.location.origin + "/auth",
     });
     if (error) {
-      toast.error("Não foi possível enviar o email de redefinição.");
+      toast.error(`Não foi possível enviar: ${error.message}`);
       return;
     }
     toast.success("Email de redefinição enviado.");
