@@ -51,8 +51,8 @@ function AuthPage() {
     e.preventDefault();
     const emailNormalizado = email.trim().toLowerCase();
     const dominioValido = DOMINIOS.some((dominio) => emailNormalizado.endsWith(`@${dominio}`));
-    if (!dominioValido) {
-      toast.error("Use seu email da empresa (ex: nome@sunvisorbrasil.com.br).");
+    if (modo === "criar" && !dominioValido) {
+      toast.error(`Use seu email da empresa (ex: nome@${DOMINIOS[0]}).`);
       return;
     }
     setEnviando(true);
@@ -85,7 +85,7 @@ function AuthPage() {
           : msg.includes("already registered")
             ? "Esse email já tem cadastro. Use a opção Entrar."
             : msg.includes("EMAIL_DOMINIO_NAO_AUTORIZADO")
-              ? `Somente emails @${DOMINIO} podem criar acesso.`
+              ? `Somente emails @${DOMINIOS[0]} podem criar acesso.`
               : msg,
       );
     } finally {
@@ -148,7 +148,7 @@ function AuthPage() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="nome@empresa.com.br"
+            placeholder="nome@sunvisorbrasil.com.br"
             autoComplete="email"
           />
         </div>
