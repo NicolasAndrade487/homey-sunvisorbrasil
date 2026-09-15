@@ -15,6 +15,13 @@
       "when": 1789382226051,
       "tag": "0001_bloquear_auto_aprovacao",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789469961836,
+      "tag": "0002_unique_profile_email",
+      "breakpoints": true
     }
   ]
 }
