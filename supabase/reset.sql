@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS public.documentos CASCADE;
+DROP TABLE IF EXISTS public.user_roles CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TYPE IF EXISTS public.app_role CASCADE;

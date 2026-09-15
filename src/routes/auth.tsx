@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import logo from "@/assets/svb-logo.png.asset.json";
+import logo from "@/assets/svb-logo.png.png";
 
 const DOMINIOS = ["sunvisorbrasil.com.br", "sunvisorbrasil.com"] as const;
 
@@ -187,7 +187,7 @@ function AuthPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-      <img src={logo.url} alt="SVB" className="mb-8 h-11 w-auto brightness-0 invert" />
+      <img src={logo} alt="SVB" className="mb-8 h-11 w-auto brightness-0 invert" />
       <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 shadow-lg">
         {children}
       </div>

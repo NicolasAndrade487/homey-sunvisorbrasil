@@ -5,7 +5,7 @@ import { ArrowLeft, Check, Clock, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/svb-logo.png.asset.json";
+import logo from "@/assets/svb-logo.png.png";
 
 type Status = "pendente" | "aprovado" | "recusado";
 const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
@@ -130,7 +130,7 @@ function Aprovacoes() {
     <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-5">
-          <img src={logo.url} alt="SVB" className="h-10 w-auto brightness-0 invert" />
+          <img src={logo} alt="SVB" className="h-10 w-auto brightness-0 invert" />
           <div className="font-display text-sm leading-tight text-primary-foreground/70">
             <strong className="block text-base font-semibold text-primary-foreground">
               Liberação de acessos
