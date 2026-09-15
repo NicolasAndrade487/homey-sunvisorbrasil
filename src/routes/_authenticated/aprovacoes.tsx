@@ -86,6 +86,7 @@ function Aprovacoes() {
         status,
         aprovado: status === "aprovado",
         decidido_em: new Date().toISOString(),
+        decidido_por: (await supabase.auth.getUser()).data.user?.id ?? null,
       })
       .eq("id", pessoa.id)
       .select("id, status, aprovado");
