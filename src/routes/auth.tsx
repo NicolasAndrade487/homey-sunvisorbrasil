@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const DOMINIOS = ["sunvisorbrasil.com.br", "sunvisorbrasil.com"] as const;
+
+function isRecoveryUrl() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.location.hash.includes("type=recovery") ||
+    new URLSearchParams(window.location.search).get("type") === "recovery"
+  );
+}
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -40,25 +48,29 @@ function AuthPage() {
   const [novaSenha, setNovaSenha] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [aguardandoEmail, setAguardandoEmail] = useState(false);
-  const [recuperando, setRecuperando] = useState(() =>
-    typeof window !== "undefined" && window.location.hash.includes("type=recovery"),
-  );
+  const [recuperando, setRecuperando] = useState(isRecoveryUrl);
+  const recuperacaoRef = useRef(isRecoveryUrl());
   const [emailEnviado, setEmailEnviado] = useState(false);
   const [solicitandoRedefinicao, setSolicitandoRedefinicao] = useState(false);
 
   useEffect(() => {
     let montado = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (montado && data.session && !recuperando) navigate({ to: "/portal", replace: true });
-    });
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") setRecuperando(true);
+      if (event === "PASSWORD_RECOVERY") {
+        recuperacaoRef.current = true;
+        setRecuperando(true);
+      }
+    });
+    supabase.auth.getSession().then(({ data: sessao }) => {
+      if (montado && sessao.session && !recuperacaoRef.current) {
+        navigate({ to: "/portal", replace: true });
+      }
     });
     return () => {
       montado = false;
       data.subscription.unsubscribe();
     };
-  }, [navigate, recuperando]);
+  }, [navigate]);
 
   async function solicitarRedefinicao(e: React.FormEvent) {
     e.preventDefault();
