@@ -80,12 +80,21 @@ function Aprovacoes() {
   });
 
   async function definir(pessoa: Pessoa, status: Status) {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
-      .update({ status, decidido_em: new Date().toISOString() })
-      .eq("id", pessoa.id);
+      .update({
+        status,
+        aprovado: status === "aprovado",
+        decidido_em: new Date().toISOString(),
+      })
+      .eq("id", pessoa.id)
+      .select("id, status, aprovado");
     if (error) {
       toast.error("Não foi possível alterar esse acesso.");
+      return;
+    }
+    if (!data || data.length === 0) {
+      toast.error("A alteração não foi permitida pelo banco de dados.");
       return;
     }
     toast.success(
