@@ -82,8 +82,10 @@ function AuthPage() {
       toast.error(
         msg.includes("Invalid login credentials")
           ? "Email ou senha incorretos."
-          : msg.includes("already registered")
-            ? "Esse email já tem cadastro. Use a opção Entrar."
+            : msg.includes("already registered") ||
+                msg.includes("profiles_email_unique_idx") ||
+                msg.includes("duplicate key")
+              ? "Esse email já tem cadastro. Use a opção Entrar."
             : msg.includes("EMAIL_DOMINIO_NAO_AUTORIZADO")
               ? `Somente emails @${DOMINIOS[0]} podem criar acesso.`
               : msg,
