@@ -114,7 +114,7 @@ function Aprovacoes() {
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(pessoa.email, {
-      redirectTo: window.location.origin + "/auth",
+      redirectTo: window.location.origin + "/redefinir-senha",
     });
     if (error) {
       toast.error(`Não foi possível enviar: ${error.message}`);

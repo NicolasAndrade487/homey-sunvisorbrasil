@@ -81,7 +81,7 @@ function AuthPage() {
     }
     setEnviando(true);
     const { error } = await supabase.auth.resetPasswordForEmail(emailNormalizado, {
-      redirectTo: window.location.origin + "/auth",
+      redirectTo: window.location.origin + "/redefinir-senha",
     });
     setEnviando(false);
     if (error) {
