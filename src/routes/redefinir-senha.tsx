@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistSenha } from "@/components/checklist-senha";
-import { BrandLogo } from "@/components/brand-logo";
 import { MIN_SENHA, primeiroErroSenha } from "@/lib/senha";
 
 export const Route = createFileRoute("/redefinir-senha")({
@@ -54,7 +53,9 @@ function RedefinirSenha() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-      <BrandLogo className="mb-8 h-auto w-full max-w-[220px] object-contain" />
+      <div className="mb-8 font-display text-5xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
+        SVB
+      </div>
       <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 shadow-lg">
         <h1 className="font-display text-xl font-semibold text-card-foreground">Nova senha</h1>
         <p className="mt-2 text-sm text-muted-foreground">

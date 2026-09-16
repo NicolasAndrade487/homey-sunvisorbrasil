@@ -130,7 +130,7 @@ function Aprovacoes() {
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(pessoa.email, {
-      redirectTo: window.location.origin + "/redefinir-senha",
+      redirectTo: "https://homey-sunvisorbrasil.vercel.app/redefinir-senha",
     });
     if (error) {
       toast.error(`Não foi possível enviar: ${error.message}`);
@@ -170,7 +170,9 @@ function Aprovacoes() {
     <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-5">
-          <BrandLogo className="h-14 w-auto max-w-[220px] object-contain" />
+          <div className="font-display text-4xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
+            SVB
+          </div>
           <div className="font-display text-sm leading-tight text-primary-foreground/70">
             <strong className="block text-base font-semibold text-primary-foreground">
               Liberação de acessos
