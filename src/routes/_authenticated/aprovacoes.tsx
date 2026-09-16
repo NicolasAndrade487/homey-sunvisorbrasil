@@ -65,6 +65,7 @@ function formatarData(iso: string) {
 function Aprovacoes() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [abaAtiva, setAbaAtiva] = useState<"permissoes" | "auditoria">("permissoes");
 
   const { data: souAdmin, isLoading: verificando } = useQuery({
     queryKey: ["sou-admin"],
@@ -255,12 +256,11 @@ function Aprovacoes() {
             Usuários, permissões e auditoria
           </div>
           <Button
-            asChild
+            type="button"
             className="ml-auto bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+            onClick={() => setAbaAtiva("auditoria")}
           >
-            <a href="#auditoria">
-              <ClipboardList className="h-4 w-4" /> Ver logs
-            </a>
+            <ClipboardList className="h-4 w-4" /> Ver logs
           </Button>
           <Button
             asChild
@@ -275,10 +275,36 @@ function Aprovacoes() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-8">
+        <div className="grid grid-cols-2 rounded-sm border border-border bg-card p-1">
+          <button
+            type="button"
+            onClick={() => setAbaAtiva("permissoes")}
+            className={`rounded-sm px-4 py-2.5 text-sm font-semibold transition-colors ${
+              abaAtiva === "permissoes"
+                ? "bg-brand text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-brand"
+            }`}
+          >
+            Usuários e permissões
+          </button>
+          <button
+            type="button"
+            onClick={() => setAbaAtiva("auditoria")}
+            className={`flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition-colors ${
+              abaAtiva === "auditoria"
+                ? "bg-brand text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-brand"
+            }`}
+          >
+            <ClipboardList className="h-4 w-4" /> Auditoria
+          </button>
+        </div>
         {isLoading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Carregando contas...</p>
         ) : (
           <>
+            {abaAtiva === "permissoes" ? (
+              <>
             <Secao
               titulo={`Aguardando liberação (${pendentes.length})`}
               vazio="Nenhum pedido pendente."
@@ -350,8 +376,11 @@ function Aprovacoes() {
                 </Button>
               )}
             />
+              </>
+            ) : null}
 
-            <section id="auditoria" className="scroll-mt-6 rounded-sm border border-border border-l-[3px] border-l-gold bg-card p-4 shadow-sm sm:p-5">
+            {abaAtiva === "auditoria" ? (
+            <section id="auditoria" className="rounded-sm border border-border border-l-[3px] border-l-gold bg-card p-4 shadow-sm sm:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand">
@@ -415,6 +444,7 @@ function Aprovacoes() {
                 </div>
               )}
             </section>
+            ) : null}
           </>
         )}
       </main>
