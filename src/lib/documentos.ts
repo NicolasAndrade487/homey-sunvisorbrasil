@@ -13,12 +13,15 @@ export type Documento = {
   id: string;
   titulo: string;
   categoria: string;
+  codigo_produto: string | null;
   descricao: string | null;
+  data_vigencia: string | null;
   tipo: string;
   url: string | null;
   storage_path: string | null;
   file_name: string | null;
   file_size: number | null;
+  versao: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

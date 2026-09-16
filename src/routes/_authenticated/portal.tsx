@@ -5,9 +5,12 @@ import { toast } from "sonner";
 import {
   BadgeCheck,
   BookOpen,
-  ExternalLink,
+  ArrowDownAZ,
+  Download,
   FileText,
   HelpCircle,
+  LayoutGrid,
+  List,
   LogOut,
   Pencil,
   Plus,
@@ -17,6 +20,7 @@ import {
   Trash2,
   UploadCloud,
   X,
+  Eye,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -93,10 +97,14 @@ function Portal() {
   const queryClient = useQueryClient();
   const [busca, setBusca] = useState("");
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
+  const [ordenacao, setOrdenacao] = useState<"recente" | "alfabetica">("recente");
+  const [visualizacao, setVisualizacao] = useState<"grade" | "lista">("grade");
   const [modalAberto, setModalAberto] = useState(false);
   
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
+  const [documentoPreview, setDocumentoPreview] = useState<Documento | null>(null);
+  const [urlPreview, setUrlPreview] = useState<string | null>(null);
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
@@ -156,29 +164,62 @@ function Portal() {
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
-    return documentos.filter((d) => {
+    const resultado = documentos.filter((d) => {
       const okCategoria = categoriaAtiva === "Todos" || d.categoria === categoriaAtiva;
       const okBusca =
         !termo ||
-        `${d.titulo} ${d.descricao ?? ""} ${d.file_name ?? ""}`.toLowerCase().includes(termo);
+        `${d.titulo} ${d.descricao ?? ""} ${d.file_name ?? ""} ${d.codigo_produto ?? ""} ${d.versao ?? ""}`
+          .toLowerCase()
+          .includes(termo);
       return okCategoria && okBusca;
     });
-  }, [documentos, busca, categoriaAtiva]);
+    return resultado.sort((a, b) =>
+      ordenacao === "alfabetica"
+        ? a.titulo.localeCompare(b.titulo, "pt-BR")
+        : b.created_at.localeCompare(a.created_at),
+    );
+  }, [documentos, busca, categoriaAtiva, ordenacao]);
 
-  async function abrirDocumento(doc: Documento) {
+  async function obterUrlDocumento(doc: Documento) {
     if (doc.tipo === "link" && doc.url) {
-      window.open(doc.url, "_blank", "noopener,noreferrer");
-      return;
+      return doc.url;
     }
-    if (!doc.storage_path) return;
+    if (!doc.storage_path) return null;
     const { data, error } = await supabase.storage
       .from("documentos")
       .createSignedUrl(doc.storage_path, 300);
     if (error || !data) {
-      toast.error("Não foi possível abrir o arquivo.");
-      return;
+      throw new Error("Não foi possível acessar o arquivo.");
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    return data.signedUrl;
+  }
+
+  async function visualizarDocumento(doc: Documento) {
+    try {
+      const url = await obterUrlDocumento(doc);
+      if (!url) return;
+      setUrlPreview(url);
+      setDocumentoPreview(doc);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível abrir o arquivo.");
+    }
+  }
+
+  async function baixarDocumento(doc: Documento) {
+    try {
+      const url = await obterUrlDocumento(doc);
+      if (!url) return;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = doc.file_name || `${doc.titulo}.pdf`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
+    }
   }
 
   async function excluir(doc: Documento) {
@@ -269,16 +310,18 @@ function Portal() {
                 className="border-primary-foreground/20 bg-primary-foreground/10 pl-9 text-primary-foreground placeholder:text-primary-foreground/45 focus-visible:border-gold"
               />
             </div>
-            <Button
-              className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
-              onClick={() => {
-                setEditando(null);
-                setModalAberto(true);
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Adicionar</span>
-            </Button>
+            {acesso?.admin ? (
+              <Button
+                className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+                onClick={() => {
+                  setEditando(null);
+                  setModalAberto(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Adicionar</span>
+              </Button>
+            ) : null}
             {acesso?.admin ? (
               <Button
                 asChild
@@ -333,9 +376,41 @@ function Portal() {
           <h1 className="font-display text-2xl font-semibold text-brand-deep">
             {categoriaAtiva === "Todos" ? "Todos os documentos" : categoriaAtiva}
           </h1>
-          <span className="text-sm text-muted-foreground">
-            {filtrados.length} {filtrados.length === 1 ? "documento" : "documentos"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {filtrados.length} {filtrados.length === 1 ? "documento" : "documentos"}
+            </span>
+            <Select value={ordenacao} onValueChange={(valor) => setOrdenacao(valor as typeof ordenacao)}>
+              <SelectTrigger className="h-8 w-[145px] text-xs">
+                <ArrowDownAZ className="h-3.5 w-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recente">Mais recentes</SelectItem>
+                <SelectItem value="alfabetica">A-Z</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="flex rounded-sm border border-border p-0.5">
+              <Button
+                variant={visualizacao === "grade" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-7 w-7"
+                title="Visualização em grade"
+                onClick={() => setVisualizacao("grade")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={visualizacao === "lista" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-7 w-7"
+                title="Visualização em lista"
+                onClick={() => setVisualizacao("lista")}
+              >
+                <List className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -353,37 +428,56 @@ function Portal() {
                 ? "Ainda não há documentos cadastrados. Adicione o primeiro."
                 : "Ajuste a busca ou escolha outra categoria."}
             </p>
-            <Button
-              className="mt-5 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
-              onClick={() => {
-                setEditando(null);
-                setModalAberto(true);
-              }}
-            >
-              <Plus className="h-4 w-4" /> Adicionar documento
-            </Button>
+            {acesso?.admin ? (
+              <Button
+                className="mt-5 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+                onClick={() => {
+                  setEditando(null);
+                  setModalAberto(true);
+                }}
+              >
+                <Plus className="h-4 w-4" /> Adicionar documento
+              </Button>
+            ) : null}
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={visualizacao === "grade" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
             {filtrados.map((doc) => {
               const Icone = ICONES[doc.categoria] ?? HelpCircle;
+              const desatualizado = Boolean(
+                doc.data_vigencia && new Date(`${doc.data_vigencia}T23:59:59`) < new Date(),
+              );
               return (
                 <article
                   key={doc.id}
-                  className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-4 transition-all hover:border-l-gold hover:shadow-md"
+                  className={`flex gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-4 transition-all hover:border-l-gold hover:shadow-md ${visualizacao === "grade" ? "flex-col" : "flex-row items-center"}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-secondary">
                       <Icone className="h-4 w-4 text-brand" />
                     </div>
-                    <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
-                      {doc.categoria}
-                    </span>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
+                        {doc.categoria}
+                      </span>
+                      {desatualizado ? (
+                        <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[10.5px] font-semibold text-destructive">
+                          Desatualizado
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <h2 className="font-display text-base font-medium leading-snug text-card-foreground">
                     {doc.titulo}
                   </h2>
-                  <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {doc.codigo_produto || doc.versao ? (
+                    <p className="text-xs font-medium text-brand">
+                      {doc.codigo_produto ? `Código: ${doc.codigo_produto}` : ""}
+                      {doc.codigo_produto && doc.versao ? " · " : ""}
+                      {doc.versao ? `Rev. ${doc.versao}` : ""}
+                    </p>
+                  ) : null}
+                  <p className={`${visualizacao === "grade" ? "flex-1" : "min-w-0 flex-1 truncate"} text-sm leading-relaxed text-muted-foreground`}>
                     {doc.descricao || "Sem descrição adicional."}
                   </p>
                   <div className="mt-1 flex items-center justify-between gap-2">
@@ -394,33 +488,46 @@ function Portal() {
                         : ""}
                     </span>
                     <div className="flex items-center gap-1">
+                      {acesso?.admin ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground"
+                            title="Editar"
+                            onClick={() => {
+                              setEditando(doc);
+                              setModalAberto(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            title="Remover"
+                            onClick={() => setParaExcluir(doc)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground"
-                        title="Editar"
-                        onClick={() => {
-                          setEditando(doc);
-                          setModalAberto(true);
-                        }}
+                        title="Baixar"
+                        onClick={() => void baixarDocumento(doc)}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        title="Remover"
-                        onClick={() => setParaExcluir(doc)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Download className="h-3.5 w-3.5" />
                       </Button>
                       <Button
                         size="sm"
                         className="h-8 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
-                        onClick={() => abrirDocumento(doc)}
+                        onClick={() => void visualizarDocumento(doc)}
                       >
-                        Abrir PDF <ExternalLink className="h-3 w-3" />
+                        Visualizar <Eye className="h-3 w-3" />
                       </Button>
                     </div>
                   </div>
@@ -440,6 +547,46 @@ function Portal() {
           queryClient.invalidateQueries({ queryKey: ["documentos"] });
         }}
       />
+
+      <Dialog
+        open={Boolean(documentoPreview)}
+        onOpenChange={(aberto) => {
+          if (!aberto) {
+            setDocumentoPreview(null);
+            setUrlPreview(null);
+          }
+        }}
+      >
+        <DialogContent className="flex h-[90vh] max-w-5xl flex-col p-0">
+          <DialogHeader className="flex-row items-center justify-between border-b border-border px-5 py-4">
+            <div className="min-w-0">
+              <DialogTitle className="truncate font-display">
+                {documentoPreview?.titulo}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                Visualização do documento técnico selecionado.
+              </DialogDescription>
+            </div>
+            {documentoPreview ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void baixarDocumento(documentoPreview)}
+              >
+                <Download className="h-4 w-4" />
+                Baixar
+              </Button>
+            ) : null}
+          </DialogHeader>
+          {urlPreview ? (
+            <iframe
+              title={documentoPreview?.titulo ?? "Visualização do documento"}
+              src={urlPreview}
+              className="min-h-0 flex-1 bg-muted"
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={Boolean(paraExcluir)} onOpenChange={(o) => !o && setParaExcluir(null)}>
         <AlertDialogContent>
@@ -482,6 +629,9 @@ function FormularioDocumento({
   const [modo, setModo] = useState<"upload" | "link">("upload");
   const [titulo, setTitulo] = useState("");
   const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
+  const [codigoProduto, setCodigoProduto] = useState("");
+  const [versao, setVersao] = useState("");
+  const [dataVigencia, setDataVigencia] = useState("");
   const [descricao, setDescricao] = useState("");
   const [url, setUrl] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -501,6 +651,9 @@ function FormularioDocumento({
     idCarregado.current = chave;
     setTitulo(documento?.titulo ?? "");
     setCategoria(documento?.categoria ?? CATEGORIAS[0]);
+    setCodigoProduto(documento?.codigo_produto ?? "");
+    setVersao(documento?.versao ?? "");
+    setDataVigencia(documento?.data_vigencia ?? "");
     setDescricao(documento?.descricao ?? "");
     setUrl(documento?.url ?? "");
     setArquivo(null);
@@ -523,6 +676,9 @@ function FormularioDocumento({
       let campos: Partial<Documento> = {
         titulo: titulo.trim(),
         categoria,
+        codigo_produto: codigoProduto.trim() || null,
+        versao: versao.trim() || null,
+        data_vigencia: dataVigencia || null,
         descricao: descricao.trim() || null,
       };
 
@@ -637,6 +793,37 @@ function FormularioDocumento({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="codigo-produto">Código / modelo</Label>
+              <Input
+                id="codigo-produto"
+                value={codigoProduto}
+                onChange={(e) => setCodigoProduto(e.target.value)}
+                placeholder="Ex: SVB-TRK-08"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="versao">Versão / revisão</Label>
+              <Input
+                id="versao"
+                value={versao}
+                onChange={(e) => setVersao(e.target.value)}
+                placeholder="Ex: Rev. 03"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="data-vigencia">Vigente até (opcional)</Label>
+            <Input
+              id="data-vigencia"
+              type="date"
+              value={dataVigencia}
+              onChange={(e) => setDataVigencia(e.target.value)}
+            />
           </div>
 
           {modo === "upload" ? (

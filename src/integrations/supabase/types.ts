@@ -17,8 +17,10 @@ export type Database = {
       documentos: {
         Row: {
           categoria: string
+          codigo_produto: string | null
           created_at: string
           created_by: string | null
+          data_vigencia: string | null
           descricao: string | null
           file_name: string | null
           file_size: number | null
@@ -28,11 +30,14 @@ export type Database = {
           titulo: string
           updated_at: string
           url: string | null
+          versao: string | null
         }
         Insert: {
           categoria?: string
+          codigo_produto?: string | null
           created_at?: string
           created_by?: string | null
+          data_vigencia?: string | null
           descricao?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -42,11 +47,14 @@ export type Database = {
           titulo: string
           updated_at?: string
           url?: string | null
+          versao?: string | null
         }
         Update: {
           categoria?: string
+          codigo_produto?: string | null
           created_at?: string
           created_by?: string | null
+          data_vigencia?: string | null
           descricao?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -56,6 +64,7 @@ export type Database = {
           titulo?: string
           updated_at?: string
           url?: string | null
+          versao?: string | null
         }
         Relationships: []
       }
