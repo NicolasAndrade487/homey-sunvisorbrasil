@@ -637,15 +637,6 @@ function Portal() {
                     <h2 className="min-w-0 flex-1 font-display text-base font-medium leading-snug text-card-foreground">
                       {doc.titulo}
                     </h2>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      title="Ver histórico de versões"
-                      onClick={() => setDocumentoHistorico(doc)}
-                    >
-                      <History className="h-3.5 w-3.5" />
-                    </Button>
                   </div>
                   {doc.codigo_produto || doc.versao ? (
                     <p className="text-xs font-medium text-brand">
@@ -709,6 +700,15 @@ function Portal() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        title="Ver histórico de versões"
+                        onClick={() => setDocumentoHistorico(doc)}
+                      >
+                        <History className="h-3.5 w-3.5" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
