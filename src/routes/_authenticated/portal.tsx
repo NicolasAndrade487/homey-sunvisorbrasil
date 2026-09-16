@@ -112,6 +112,7 @@ function Portal() {
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [documentoHistorico, setDocumentoHistorico] = useState<Documento | null>(null);
   const [versaoParaRestaurar, setVersaoParaRestaurar] = useState<string | null>(null);
+  const [descricaoExpandida, setDescricaoExpandida] = useState<string | null>(null);
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
@@ -638,13 +639,12 @@ function Portal() {
                     </h2>
                     <Button
                       variant="outline"
-                      size="sm"
-                      className="h-8 shrink-0 gap-1 px-2 text-xs"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
                       title="Ver histórico de versões"
                       onClick={() => setDocumentoHistorico(doc)}
                     >
                       <History className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Histórico</span>
                     </Button>
                   </div>
                   {doc.codigo_produto || doc.versao ? (
@@ -654,9 +654,28 @@ function Portal() {
                       {doc.versao ? `Rev. ${doc.versao}` : ""}
                     </p>
                   ) : null}
-                  <p className={`${visualizacao === "grade" ? "flex-1" : "min-w-0 flex-1 truncate"} text-sm leading-relaxed text-muted-foreground`}>
+                  <p
+                    className={`${
+                      descricaoExpandida === doc.id
+                        ? ""
+                        : visualizacao === "grade"
+                          ? "line-clamp-3"
+                          : "line-clamp-2"
+                    } ${visualizacao === "grade" ? "flex-1" : "min-w-0 flex-1"} text-sm leading-relaxed text-muted-foreground`}
+                  >
                     {doc.descricao || "Sem descrição adicional."}
                   </p>
+                  {doc.descricao && doc.descricao.length > 140 ? (
+                    <button
+                      type="button"
+                      className="self-start text-xs font-semibold text-brand hover:underline"
+                      onClick={() =>
+                        setDescricaoExpandida((atual) => (atual === doc.id ? null : doc.id))
+                      }
+                    >
+                      {descricaoExpandida === doc.id ? "Ver menos" : "Ver mais"}
+                    </button>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
                     <span className="shrink-0 text-xs text-muted-foreground/80">
                       {formatarData(doc.created_at)}

@@ -1,4 +1,4 @@
-const CACHE_NAME = "svb-shell-v1";
+const CACHE_NAME = "svb-shell-v2";
 const SHELL = ["/", "/auth", "/favicon.png", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

@@ -132,7 +132,9 @@ function RootComponent() {
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/sw.js");
+      void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => {
+        void registration.update();
+      });
     }
   }, []);
 
