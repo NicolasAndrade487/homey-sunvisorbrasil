@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   BookOpen,
   ArrowDownAZ,
+  Clock3,
   Download,
   FileText,
   HelpCircle,
@@ -16,6 +17,7 @@ import {
   Plus,
   Search,
   ShieldCheck,
+  Star,
   Table2,
   Trash2,
   UploadCloud,
@@ -99,6 +101,7 @@ function Portal() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
   const [ordenacao, setOrdenacao] = useState<"recente" | "alfabetica">("recente");
   const [visualizacao, setVisualizacao] = useState<"grade" | "lista">("grade");
+  const [filtroRapido, setFiltroRapido] = useState<"todos" | "favoritos" | "recentes">("todos");
   const [modalAberto, setModalAberto] = useState(false);
   
   const [editando, setEditando] = useState<Documento | null>(null);
@@ -120,6 +123,7 @@ function Portal() {
           podeLer: false,
           podeAtualizar: false,
           podeExcluir: false,
+          id: null,
           email: email ?? null,
         };
       const [{ data: perfil }, { data: papeis, error: erroPapeis }] = await Promise.all([
@@ -147,6 +151,7 @@ function Portal() {
         podeLer,
         podeAtualizar,
         podeExcluir,
+        id: uid,
         email: perfil?.email ?? email ?? null,
       };
     },
@@ -167,6 +172,33 @@ function Portal() {
     },
   });
 
+  const usuarioId = acesso?.id;
+  const { data: favoritos = [] } = useQuery({
+    queryKey: ["documentos-favoritos", usuarioId],
+    enabled: Boolean(usuarioId && acesso?.podeLer),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documentos_favoritos")
+        .select("documento_id");
+      if (error) throw error;
+      return data.map((item) => item.documento_id);
+    },
+  });
+
+  const { data: recentes = [] } = useQuery({
+    queryKey: ["documentos-recentes", usuarioId],
+    enabled: Boolean(usuarioId && acesso?.podeLer),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documentos_recentes")
+        .select("documento_id")
+        .order("acessado_em", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data.map((item) => item.documento_id);
+    },
+  });
+
   const contagens = useMemo(() => {
     const mapa: Record<string, number> = {};
     documentos.forEach((d) => {
@@ -179,19 +211,52 @@ function Portal() {
     const termo = busca.trim().toLowerCase();
     const resultado = documentos.filter((d) => {
       const okCategoria = categoriaAtiva === "Todos" || d.categoria === categoriaAtiva;
+      const okFiltroRapido =
+        filtroRapido === "todos" ||
+        (filtroRapido === "favoritos" && favoritos.includes(d.id)) ||
+        (filtroRapido === "recentes" && recentes.includes(d.id));
       const okBusca =
         !termo ||
         `${d.titulo} ${d.descricao ?? ""} ${d.file_name ?? ""} ${d.codigo_produto ?? ""} ${d.versao ?? ""}`
           .toLowerCase()
           .includes(termo);
-      return okCategoria && okBusca;
+      return okCategoria && okBusca && okFiltroRapido;
     });
     return resultado.sort((a, b) =>
       ordenacao === "alfabetica"
         ? a.titulo.localeCompare(b.titulo, "pt-BR")
         : b.created_at.localeCompare(a.created_at),
     );
-  }, [documentos, busca, categoriaAtiva, ordenacao]);
+  }, [documentos, busca, categoriaAtiva, ordenacao, filtroRapido, favoritos, recentes]);
+
+  function registrarAcesso(documentoId: string) {
+    if (!usuarioId) return;
+    void supabase.from("documentos_recentes").upsert(
+      { user_id: usuarioId, documento_id: documentoId, acessado_em: new Date().toISOString() },
+      { onConflict: "user_id,documento_id" },
+    ).then(({ error }) => {
+      if (!error) queryClient.invalidateQueries({ queryKey: ["documentos-recentes", usuarioId] });
+    });
+  }
+
+  async function alternarFavorito(documentoId: string) {
+    if (!usuarioId) return;
+    const marcado = favoritos.includes(documentoId);
+    const resultado = marcado
+      ? await supabase
+          .from("documentos_favoritos")
+          .delete()
+          .eq("user_id", usuarioId)
+          .eq("documento_id", documentoId)
+      : await supabase
+          .from("documentos_favoritos")
+          .insert({ user_id: usuarioId, documento_id: documentoId });
+    if (resultado.error) {
+      toast.error("Não foi possível atualizar o favorito.");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["documentos-favoritos", usuarioId] });
+  }
 
   async function obterUrlDocumento(doc: Documento) {
     if (doc.tipo === "link" && doc.url) {
@@ -211,6 +276,7 @@ function Portal() {
     try {
       const url = await obterUrlDocumento(doc);
       if (!url) return;
+      registrarAcesso(doc.id);
       setUrlPreview(url);
       setDocumentoPreview(doc);
     } catch (err) {
@@ -397,6 +463,31 @@ function Portal() {
         </div>
       </nav>
 
+      <div className="border-b border-border bg-background">
+        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-6 py-2">
+          {[
+            ["todos", "Todos", null],
+            ["favoritos", "Favoritos", Star],
+            ["recentes", "Recentes", Clock3],
+          ].map(([valor, label, Icone]) => (
+            <button
+              key={valor as string}
+              type="button"
+              onClick={() => setFiltroRapido(valor as typeof filtroRapido)}
+              className={`flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-semibold transition-colors ${
+                filtroRapido === valor
+                  ? "bg-brand text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-brand"
+              }`}
+            >
+              {Icone ? <Icone className="h-3.5 w-3.5" /> : null}
+              {label as string}
+              {valor === "favoritos" ? ` (${favoritos.length})` : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <main className="mx-auto max-w-6xl px-6 pb-20 pt-8">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
           <h1 className="font-display text-2xl font-semibold text-brand-deep">
@@ -482,7 +573,16 @@ function Portal() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-secondary">
                       <Icone className="h-4 w-4 text-brand" />
                     </div>
-                    <div className="flex flex-wrap justify-end gap-1">
+                    <div className="flex flex-wrap items-start justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-7 w-7 ${favoritos.includes(doc.id) ? "text-gold" : "text-muted-foreground"}`}
+                        title={favoritos.includes(doc.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+                        onClick={() => void alternarFavorito(doc.id)}
+                      >
+                        <Star className={`h-4 w-4 ${favoritos.includes(doc.id) ? "fill-current" : ""}`} />
+                      </Button>
                       <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
                         {doc.categoria}
                       </span>

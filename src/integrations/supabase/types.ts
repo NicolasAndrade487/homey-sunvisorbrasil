@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      documentos_favoritos: {
+        Row: {
+          created_at: string
+          documento_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          documento_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          documento_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documentos: {
         Row: {
           categoria: string
@@ -65,6 +83,24 @@ export type Database = {
           updated_at?: string
           url?: string | null
           versao?: string | null
+        }
+        Relationships: []
+      }
+      documentos_recentes: {
+        Row: {
+          acessado_em: string
+          documento_id: string
+          user_id: string
+        }
+        Insert: {
+          acessado_em?: string
+          documento_id: string
+          user_id: string
+        }
+        Update: {
+          acessado_em?: string
+          documento_id?: string
+          user_id?: string
         }
         Relationships: []
       }
