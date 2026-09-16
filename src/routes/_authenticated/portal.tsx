@@ -1245,8 +1245,7 @@ function HistoricoDocumento({
   if (versoes.length === 0) {
     return (
       <p className="py-6 text-sm text-muted-foreground">
-        Nenhum snapshot anterior foi registrado. Revisões preenchidas antes da ativação do
-        histórico não podem ser reconstruídas automaticamente; a próxima edição criará a primeira
+        Nenhuma versão anterior foi registrada; a próxima edição criará a primeira
         versão aqui.
       </p>
     );
