@@ -411,7 +411,7 @@ function Portal() {
                   variant="ghost"
                   size="icon"
                   title="Importar vários PDFs"
-                  className="border border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground hover:bg-gold hover:text-gold-foreground"
+                  className="h-9 w-9 shrink-0 border border-white/30 !bg-white/15 !text-white shadow-sm hover:!bg-gold hover:!text-gold-foreground"
                   onClick={() => setImportacaoAberta(true)}
                 >
                   <UploadCloud className="h-4 w-4" />
@@ -626,14 +626,14 @@ function Portal() {
                   <p className={`${visualizacao === "grade" ? "flex-1" : "min-w-0 flex-1 truncate"} text-sm leading-relaxed text-muted-foreground`}>
                     {doc.descricao || "Sem descrição adicional."}
                   </p>
-                  <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="text-xs text-muted-foreground/80">
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
+                    <span className="shrink-0 text-xs text-muted-foreground/80">
                       {formatarData(doc.created_at)}
                       {doc.tipo === "file" && doc.file_size
                         ? ` · ${formatarTamanho(doc.file_size)}`
                         : ""}
                     </span>
-                    <div className="flex items-center gap-1">
+                    <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
                       {acesso?.podeAtualizar ? (
                         <Button
                           variant="ghost"
@@ -667,7 +667,7 @@ function Portal() {
                         onClick={() => setDocumentoHistorico(doc)}
                       >
                         <History className="h-3.5 w-3.5" />
-                        <span>Histórico</span>
+                        <span className="hidden sm:inline">Histórico</span>
                       </Button>
                       <Button
                         variant="ghost"
