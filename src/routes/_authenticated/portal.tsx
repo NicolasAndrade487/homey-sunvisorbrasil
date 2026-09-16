@@ -209,6 +209,14 @@ function Portal() {
     [documentos],
   );
 
+  const documentosDaCategoria = useMemo(
+    () =>
+      categoriaAtiva === "Todos"
+        ? documentos
+        : documentos.filter((documento) => documento.categoria === categoriaAtiva),
+    [documentos, categoriaAtiva],
+  );
+
   const { data: documentosAcessados = [] } = useQuery({
     queryKey: ["documentos-recentes", usuarioId],
     enabled: Boolean(usuarioId && acesso?.podeLer),
@@ -222,6 +230,15 @@ function Portal() {
       return data.map((item) => item.documento_id);
     },
   });
+
+  const contagensFiltros = useMemo(
+    () => ({
+      favoritos: documentosDaCategoria.filter((documento) => favoritos.includes(documento.id)).length,
+      adicionados: documentosDaCategoria.filter((documento) => documentosRecentes.includes(documento.id)).length,
+      acessados: documentosDaCategoria.filter((documento) => documentosAcessados.includes(documento.id)).length,
+    }),
+    [documentosDaCategoria, favoritos, documentosRecentes, documentosAcessados],
+  );
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -566,7 +583,13 @@ function Portal() {
             >
               {Icone ? <Icone className="h-3.5 w-3.5" /> : null}
               {label as string}
-              {valor === "favoritos" ? ` (${favoritos.length})` : null}
+              {valor === "favoritos"
+                ? ` (${contagensFiltros.favoritos})`
+                : valor === "adicionados"
+                  ? ` (${contagensFiltros.adicionados})`
+                  : valor === "acessados"
+                    ? ` (${contagensFiltros.acessados})`
+                    : null}
             </button>
           ))}
         </div>
@@ -629,7 +652,7 @@ function Portal() {
                 ? "Ainda não há documentos cadastrados. Adicione o primeiro."
                 : "Ajuste a busca ou escolha outra categoria."}
             </p>
-            {acesso?.podeAtualizar ? (
+            {acesso?.podeAtualizar && documentos.length === 0 ? (
               <Button
                 className="mt-5 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                 onClick={() => {
