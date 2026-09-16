@@ -102,7 +102,9 @@ function Portal() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>("Todos");
   const [ordenacao, setOrdenacao] = useState<"recente" | "alfabetica">("recente");
   const [visualizacao, setVisualizacao] = useState<"grade" | "lista">("grade");
-  const [filtroRapido, setFiltroRapido] = useState<"todos" | "favoritos" | "recentes">("todos");
+  const [filtroRapido, setFiltroRapido] = useState<
+    "todos" | "favoritos" | "adicionados" | "acessados"
+  >("todos");
   const [modalAberto, setModalAberto] = useState(false);
   const [importacaoAberta, setImportacaoAberta] = useState(false);
   
@@ -190,7 +192,24 @@ function Portal() {
     },
   });
 
-  const { data: recentes = [] } = useQuery({
+  const contagens = useMemo(() => {
+    const mapa: Record<string, number> = {};
+    documentos.forEach((d) => {
+      mapa[d.categoria] = (mapa[d.categoria] ?? 0) + 1;
+    });
+    return mapa;
+  }, [documentos]);
+
+  const documentosRecentes = useMemo(
+    () =>
+      [...documentos]
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .slice(0, 20)
+        .map((documento) => documento.id),
+    [documentos],
+  );
+
+  const { data: documentosAcessados = [] } = useQuery({
     queryKey: ["documentos-recentes", usuarioId],
     enabled: Boolean(usuarioId && acesso?.podeLer),
     queryFn: async () => {
@@ -204,14 +223,6 @@ function Portal() {
     },
   });
 
-  const contagens = useMemo(() => {
-    const mapa: Record<string, number> = {};
-    documentos.forEach((d) => {
-      mapa[d.categoria] = (mapa[d.categoria] ?? 0) + 1;
-    });
-    return mapa;
-  }, [documentos]);
-
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     const resultado = documentos.filter((d) => {
@@ -219,7 +230,8 @@ function Portal() {
       const okFiltroRapido =
         filtroRapido === "todos" ||
         (filtroRapido === "favoritos" && favoritos.includes(d.id)) ||
-        (filtroRapido === "recentes" && recentes.includes(d.id));
+        (filtroRapido === "adicionados" && documentosRecentes.includes(d.id)) ||
+        (filtroRapido === "acessados" && documentosAcessados.includes(d.id));
       const okBusca =
         !termo ||
         `${d.titulo} ${d.descricao ?? ""} ${d.file_name ?? ""} ${d.codigo_produto ?? ""} ${d.versao ?? ""}`
@@ -232,16 +244,30 @@ function Portal() {
         ? a.titulo.localeCompare(b.titulo, "pt-BR")
         : b.created_at.localeCompare(a.created_at),
     );
-  }, [documentos, busca, categoriaAtiva, ordenacao, filtroRapido, favoritos, recentes]);
+  }, [
+    documentos,
+    busca,
+    categoriaAtiva,
+    ordenacao,
+    filtroRapido,
+    favoritos,
+    documentosRecentes,
+    documentosAcessados,
+  ]);
 
   function registrarAcesso(documentoId: string) {
     if (!usuarioId) return;
-    void supabase.from("documentos_recentes").upsert(
-      { user_id: usuarioId, documento_id: documentoId, acessado_em: new Date().toISOString() },
-      { onConflict: "user_id,documento_id" },
-    ).then(({ error }) => {
-      if (!error) queryClient.invalidateQueries({ queryKey: ["documentos-recentes", usuarioId] });
-    });
+    void supabase
+      .from("documentos_recentes")
+      .upsert(
+        { user_id: usuarioId, documento_id: documentoId, acessado_em: new Date().toISOString() },
+        { onConflict: "user_id,documento_id" },
+      )
+      .then(({ error }) => {
+        if (!error) {
+          void queryClient.invalidateQueries({ queryKey: ["documentos-recentes", usuarioId] });
+        }
+      });
   }
 
   async function alternarFavorito(documentoId: string) {
@@ -326,16 +352,16 @@ function Portal() {
     }
     if (usuarioId) {
       const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
-      const chaveRecentes = ["documentos-recentes", usuarioId] as const;
+      const chaveAcessados = ["documentos-recentes", usuarioId] as const;
       queryClient.setQueryData<string[]>(chaveFavoritos, (atuais = []) =>
         atuais.filter((id) => id !== doc.id),
       );
-      queryClient.setQueryData<string[]>(chaveRecentes, (atuais = []) =>
+      queryClient.setQueryData<string[]>(chaveAcessados, (atuais = []) =>
         atuais.filter((id) => id !== doc.id),
       );
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: chaveFavoritos }),
-        queryClient.invalidateQueries({ queryKey: chaveRecentes }),
+        queryClient.invalidateQueries({ queryKey: chaveAcessados }),
       ]);
     }
     toast.success("Documento removido.");
@@ -525,7 +551,8 @@ function Portal() {
           {[
             ["todos", "Todos", null],
             ["favoritos", "Favoritos", Star],
-            ["recentes", "Recentes", Clock3],
+            ["adicionados", "Adicionados recentemente", Clock3],
+            ["acessados", "Acessados por mim", Eye],
           ].map(([valor, label, Icone]) => (
             <button
               key={valor as string}
