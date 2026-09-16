@@ -589,10 +589,10 @@ function Portal() {
           }
         }}
       >
-        <DialogContent className="flex h-[90vh] max-w-5xl flex-col p-0">
-          <DialogHeader className="flex-row items-center justify-between border-b border-border px-5 py-4">
-            <div className="min-w-0">
-              <DialogTitle className="truncate font-display">
+        <DialogContent className="flex h-[90vh] w-[calc(100%-1rem)] max-w-5xl flex-col gap-0 p-0">
+          <DialogHeader className="flex-col items-start gap-3 border-b border-border px-4 py-4 pr-12 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+            <div className="min-w-0 max-w-full">
+              <DialogTitle className="truncate font-display text-base sm:text-lg">
                 {documentoPreview?.titulo}
               </DialogTitle>
               <DialogDescription className="sr-only">
@@ -603,6 +603,7 @@ function Portal() {
               <Button
                 variant="outline"
                 size="sm"
+                className="shrink-0"
                 onClick={() => void baixarDocumento(documentoPreview)}
               >
                 <Download className="h-4 w-4" />

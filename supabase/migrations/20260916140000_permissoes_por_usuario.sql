@@ -90,43 +90,51 @@ GRANT EXECUTE ON FUNCTION public.definir_permissoes_usuario(uuid, text, boolean,
 TO authenticated;
 
 DROP POLICY IF EXISTS "documentos_select_authenticated" ON public.documentos;
+DROP POLICY IF EXISTS "documentos_select_com_permissao" ON public.documentos;
 CREATE POLICY "documentos_select_com_permissao"
 ON public.documentos FOR SELECT TO authenticated
 USING (public.usuario_tem_permissao('ler'));
 
 DROP POLICY IF EXISTS "documentos_insert_aprovado" ON public.documentos;
+DROP POLICY IF EXISTS "documentos_insert_com_permissao" ON public.documentos;
 CREATE POLICY "documentos_insert_com_permissao"
 ON public.documentos FOR INSERT TO authenticated
 WITH CHECK (public.usuario_tem_permissao('atualizar') AND auth.uid() = created_by);
 
 DROP POLICY IF EXISTS "documentos_update_aprovado" ON public.documentos;
+DROP POLICY IF EXISTS "documentos_update_com_permissao" ON public.documentos;
 CREATE POLICY "documentos_update_com_permissao"
 ON public.documentos FOR UPDATE TO authenticated
 USING (public.usuario_tem_permissao('atualizar'))
 WITH CHECK (public.usuario_tem_permissao('atualizar'));
 
 DROP POLICY IF EXISTS "documentos_delete_admin" ON public.documentos;
+DROP POLICY IF EXISTS "documentos_delete_com_permissao" ON public.documentos;
 CREATE POLICY "documentos_delete_com_permissao"
 ON public.documentos FOR DELETE TO authenticated
 USING (public.usuario_tem_permissao('excluir'));
 
 DROP POLICY IF EXISTS "documentos_files_select" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_files_select_com_permissao" ON storage.objects;
 CREATE POLICY "documentos_files_select_com_permissao"
 ON storage.objects FOR SELECT TO authenticated
 USING (public.usuario_tem_permissao('ler') AND bucket_id = 'documentos');
 
 DROP POLICY IF EXISTS "documentos_files_insert_aprovado" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_files_insert_com_permissao" ON storage.objects;
 CREATE POLICY "documentos_files_insert_com_permissao"
 ON storage.objects FOR INSERT TO authenticated
 WITH CHECK (public.usuario_tem_permissao('atualizar') AND bucket_id = 'documentos');
 
 DROP POLICY IF EXISTS "documentos_files_update_aprovado" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_files_update_com_permissao" ON storage.objects;
 CREATE POLICY "documentos_files_update_com_permissao"
 ON storage.objects FOR UPDATE TO authenticated
 USING (public.usuario_tem_permissao('atualizar') AND bucket_id = 'documentos')
 WITH CHECK (public.usuario_tem_permissao('atualizar') AND bucket_id = 'documentos');
 
 DROP POLICY IF EXISTS "documentos_files_delete_admin" ON storage.objects;
+DROP POLICY IF EXISTS "documentos_files_delete_com_permissao" ON storage.objects;
 CREATE POLICY "documentos_files_delete_com_permissao"
 ON storage.objects FOR DELETE TO authenticated
 USING (public.usuario_tem_permissao('excluir') AND bucket_id = 'documentos');
