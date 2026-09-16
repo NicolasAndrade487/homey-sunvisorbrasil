@@ -111,6 +111,7 @@ function Portal() {
   const [documentoPreview, setDocumentoPreview] = useState<Documento | null>(null);
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
   const [documentoHistorico, setDocumentoHistorico] = useState<Documento | null>(null);
+  const [versaoParaRestaurar, setVersaoParaRestaurar] = useState<string | null>(null);
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
@@ -317,10 +318,10 @@ function Portal() {
     queryClient.invalidateQueries({ queryKey: ["documentos"] });
   }
 
-  async function restaurarVersao(versaoId: string) {
-    if (!window.confirm("Restaurar esta versão? A versão atual será preservada no histórico.")) {
-      return;
-    }
+  async function restaurarVersao() {
+    if (!versaoParaRestaurar) return;
+    const versaoId = versaoParaRestaurar;
+    setVersaoParaRestaurar(null);
     const { error } = await supabase.rpc("restaurar_versao_documento", {
       _versao_id: versaoId,
     });
@@ -631,9 +632,21 @@ function Portal() {
                       ) : null}
                     </div>
                   </div>
-                  <h2 className="font-display text-base font-medium leading-snug text-card-foreground">
-                    {doc.titulo}
-                  </h2>
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="min-w-0 flex-1 font-display text-base font-medium leading-snug text-card-foreground">
+                      {doc.titulo}
+                    </h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1 px-2 text-xs"
+                      title="Ver histórico de versões"
+                      onClick={() => setDocumentoHistorico(doc)}
+                    >
+                      <History className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Histórico</span>
+                    </Button>
+                  </div>
                   {doc.codigo_produto || doc.versao ? (
                     <p className="text-xs font-medium text-brand">
                       {doc.codigo_produto ? `Código: ${doc.codigo_produto}` : ""}
@@ -677,16 +690,6 @@ function Portal() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 gap-1 px-2 text-xs text-muted-foreground"
-                        title="Ver histórico"
-                        onClick={() => setDocumentoHistorico(doc)}
-                      >
-                        <History className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Histórico</span>
-                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -780,17 +783,45 @@ function Portal() {
         <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Histórico de versões</DialogTitle>
-            <DialogDescription>{documentoHistorico?.titulo}</DialogDescription>
+            <DialogDescription>
+              {documentoHistorico?.titulo}
+              {documentoHistorico?.versao ? ` · revisão atual ${documentoHistorico.versao}` : ""}
+            </DialogDescription>
           </DialogHeader>
           {documentoHistorico ? (
             <HistoricoDocumento
               documentoId={documentoHistorico.id}
+              versaoAtual={documentoHistorico.versao}
               podeRestaurar={Boolean(acesso?.admin)}
-              onRestaurar={restaurarVersao}
+              onRestaurar={(versaoId) => {
+                setVersaoParaRestaurar(versaoId);
+                return Promise.resolve();
+              }}
             />
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={Boolean(versaoParaRestaurar)}
+        onOpenChange={(aberto) => !aberto && setVersaoParaRestaurar(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restaurar esta versão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O documento voltará aos dados desta versão. A versão atual será preservada no
+              histórico e a ação ficará registrada na auditoria.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void restaurarVersao()}>
+              Restaurar versão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={Boolean(paraExcluir)} onOpenChange={(o) => !o && setParaExcluir(null)}>
         <AlertDialogContent>
@@ -1093,10 +1124,12 @@ function FormularioDocumento({
 
 function HistoricoDocumento({
   documentoId,
+  versaoAtual,
   podeRestaurar,
   onRestaurar,
 }: {
   documentoId: string;
+  versaoAtual: string | null;
   podeRestaurar: boolean;
   onRestaurar: (versaoId: string) => Promise<void>;
 }) {
@@ -1120,7 +1153,9 @@ function HistoricoDocumento({
   if (versoes.length === 0) {
     return (
       <p className="py-6 text-sm text-muted-foreground">
-        Nenhuma versão anterior foi registrada ainda.
+        Nenhum snapshot anterior foi registrado. Revisões preenchidas antes da ativação do
+        histórico não podem ser reconstruídas automaticamente; a próxima edição criará a primeira
+        versão aqui.
       </p>
     );
   }
