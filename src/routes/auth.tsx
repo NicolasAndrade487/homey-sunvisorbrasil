@@ -348,11 +348,7 @@ function AuthPage() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-<<<<<<< HEAD
       <BrandLogo className="mb-8 h-auto w-full max-w-[220px] object-contain" />
-=======
-      <BrandLogo className="mb-8 w-full max-w-md" />
->>>>>>> 7b24a89a4c229ba1957eb88d58e780c3f39c9e6a
       <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 shadow-lg">
         {children}
       </div>
