@@ -236,6 +236,15 @@ function Aprovacoes() {
             variant="ghost"
             className="ml-auto text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
           >
+            <a href="#auditoria">
+              <ClipboardList className="h-4 w-4" /> Auditoria
+            </a>
+          </Button>
+          <Button
+            asChild
+            variant="ghost"
+            className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          >
             <Link to="/portal">
               <ArrowLeft className="h-4 w-4" /> Portal
             </Link>
@@ -320,7 +329,7 @@ function Aprovacoes() {
               )}
             />
 
-            <section className="border-t border-border pt-8">
+            <section id="auditoria" className="scroll-mt-6 border-t border-border pt-8">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand">
                   <ClipboardList className="h-4 w-4" /> Auditoria do catálogo

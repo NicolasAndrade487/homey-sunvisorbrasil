@@ -408,10 +408,10 @@ function Portal() {
             {acesso?.podeAtualizar ? (
               <>
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
                   title="Importar vários PDFs"
-                  className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  className="border border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground hover:bg-gold hover:text-gold-foreground"
                   onClick={() => setImportacaoAberta(true)}
                 >
                   <UploadCloud className="h-4 w-4" />
