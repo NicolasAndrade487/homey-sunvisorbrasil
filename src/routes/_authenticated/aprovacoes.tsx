@@ -1,12 +1,13 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Clock, ClipboardList, Mail, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 type Status = "pendente" | "aprovado" | "recusado";
 const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
@@ -112,6 +113,7 @@ function Aprovacoes() {
   });
 
   const [filtroLog, setFiltroLog] = useState<"todos" | LogAuditoria["acao"]>("todos");
+  const [buscaLog, setBuscaLog] = useState("");
   const { data: logs = [], isLoading: carregandoLogs } = useQuery({
     queryKey: ["auditoria-documentos", filtroLog],
     enabled: souAdmin === true,
@@ -120,13 +122,34 @@ function Aprovacoes() {
         .from("documentos_auditoria")
         .select("id, documento_id, usuario_id, acao, detalhes, criado_em")
         .order("criado_em", { ascending: false })
-        .limit(100);
+        .limit(50);
       if (filtroLog !== "todos") consulta = consulta.eq("acao", filtroLog);
       const { data, error } = await consulta;
       if (error) throw error;
       return data as LogAuditoria[];
     },
   });
+
+  const logsVisiveis = useMemo(() => {
+    const termo = buscaLog.trim().toLowerCase();
+    return logs.filter((log) => {
+      if (!termo) return true;
+      const pessoa = pessoas.find((item) => item.id === log.usuario_id);
+      return `${log.detalhes?.titulo ?? ""} ${pessoa?.display_name ?? ""} ${pessoa?.email ?? ""}`
+        .toLowerCase()
+        .includes(termo);
+    });
+  }, [logs, pessoas, buscaLog]);
+
+  const contagemLogs = useMemo(
+    () => ({
+      todos: logs.length,
+      criado: logs.filter((log) => log.acao === "criado").length,
+      atualizado: logs.filter((log) => log.acao === "atualizado").length,
+      excluido: logs.filter((log) => log.acao === "excluido").length,
+    }),
+    [logs],
+  );
 
   async function definir(pessoa: Pessoa, status: Status) {
     const { data, error } = await supabase
@@ -334,43 +357,60 @@ function Aprovacoes() {
                 <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand">
                   <ClipboardList className="h-4 w-4" /> Auditoria do catálogo
                 </h2>
-                <select
-                  value={filtroLog}
-                  onChange={(e) => setFiltroLog(e.target.value as typeof filtroLog)}
-                  className="h-8 rounded-sm border border-border bg-card px-2 text-xs"
-                >
-                  <option value="todos">Todas as ações</option>
-                  <option value="criado">Criados</option>
-                  <option value="atualizado">Atualizados</option>
-                  <option value="excluido">Excluídos</option>
-                </select>
+                <Input
+                  value={buscaLog}
+                  onChange={(e) => setBuscaLog(e.target.value)}
+                  placeholder="Buscar documento ou usuário"
+                  className="h-8 w-full text-xs sm:w-56"
+                />
+              </div>
+              <div className="mb-3 grid grid-cols-4 gap-2">
+                {(["todos", "criado", "atualizado", "excluido"] as const).map((acao) => (
+                  <button
+                    key={acao}
+                    type="button"
+                    onClick={() => setFiltroLog(acao)}
+                    className={`rounded-sm border px-2 py-2 text-left transition-colors ${
+                      filtroLog === acao
+                        ? "border-brand bg-brand text-primary-foreground"
+                        : "border-border bg-card text-muted-foreground hover:border-brand/40"
+                    }`}
+                  >
+                    <span className="block text-[10px] uppercase tracking-wide opacity-75">
+                      {acao === "todos" ? "Total" : acao}
+                    </span>
+                    <strong className="text-base">{contagemLogs[acao]}</strong>
+                  </button>
+                ))}
               </div>
               {carregandoLogs ? (
                 <p className="py-6 text-sm text-muted-foreground">Carregando registros...</p>
-              ) : logs.length === 0 ? (
+              ) : logsVisiveis.length === 0 ? (
                 <p className="py-6 text-sm text-muted-foreground">Nenhuma ação registrada.</p>
               ) : (
-                <ul className="space-y-2">
-                  {logs.map((log) => (
-                    <li key={log.id} className="rounded-sm border border-border bg-card p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold">
-                          {log.acao === "criado"
-                            ? "Documento criado"
-                            : log.acao === "atualizado"
-                              ? "Documento atualizado"
-                              : "Documento excluído"}
-                        </p>
-                        <time className="text-xs text-muted-foreground">
-                          {new Date(log.criado_em).toLocaleString("pt-BR")}
+                <div className="overflow-hidden rounded-sm border border-border bg-card">
+                  {logsVisiveis.map((log) => {
+                    const pessoa = pessoas.find((item) => item.id === log.usuario_id);
+                    return (
+                      <div key={log.id} className="grid gap-2 border-b border-border p-3 last:border-b-0 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{log.detalhes?.titulo || "Documento sem título"}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {pessoa?.display_name || "Usuário não identificado"} · {pessoa?.email || log.usuario_id || "sem identificação"}
+                          </p>
+                        </div>
+                        <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
+                          log.acao === "excluido" ? "bg-destructive/10 text-destructive" : log.acao === "criado" ? "bg-emerald-500/10 text-emerald-700" : "bg-secondary text-brand"
+                        }`}>
+                          {log.acao}
+                        </span>
+                        <time className="text-xs text-muted-foreground sm:text-right">
+                          {new Date(log.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                         </time>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {log.detalhes?.titulo || "Documento sem título"} · usuário {log.usuario_id || "desconhecido"}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
+                    );
+                  })}
+                </div>
               )}
             </section>
           </>
