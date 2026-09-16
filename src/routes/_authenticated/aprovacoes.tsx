@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Status = "pendente" | "aprovado" | "recusado";
 const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
@@ -275,30 +276,20 @@ function Aprovacoes() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-8 px-6 py-8">
-        <div className="grid grid-cols-2 rounded-sm border border-border bg-card p-1">
-          <button
-            type="button"
-            onClick={() => setAbaAtiva("permissoes")}
-            className={`rounded-sm px-4 py-2.5 text-sm font-semibold transition-colors ${
-              abaAtiva === "permissoes"
-                ? "bg-brand text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-brand"
-            }`}
-          >
-            Usuários e permissões
-          </button>
-          <button
-            type="button"
-            onClick={() => setAbaAtiva("auditoria")}
-            className={`flex items-center justify-center gap-2 rounded-sm px-4 py-2.5 text-sm font-semibold transition-colors ${
-              abaAtiva === "auditoria"
-                ? "bg-brand text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-brand"
-            }`}
-          >
-            <ClipboardList className="h-4 w-4" /> Auditoria
-          </button>
-        </div>
+        <Tabs
+          value={abaAtiva}
+          onValueChange={(valor) => setAbaAtiva(valor as typeof abaAtiva)}
+          className="w-full"
+        >
+          <TabsList className="grid h-auto w-full grid-cols-2 rounded-sm border border-border bg-card p-1">
+            <TabsTrigger value="permissoes" className="py-2.5 text-sm">
+              Usuários e permissões
+            </TabsTrigger>
+            <TabsTrigger value="auditoria" className="gap-2 py-2.5 text-sm">
+              <ClipboardList className="h-4 w-4" /> Auditoria
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
         {isLoading ? (
           <p className="py-12 text-center text-sm text-muted-foreground">Carregando contas...</p>
         ) : (
