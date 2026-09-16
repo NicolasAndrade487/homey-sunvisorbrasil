@@ -407,22 +407,44 @@ function Portal() {
   }
 
   async function baixarDocumento(doc: Documento) {
+    const url = await obterUrlDocumento(doc).catch((err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Não foi possível abrir o arquivo.");
+      return undefined;
+    });
+    if (url === undefined) return;
+    if (!url) {
+      toast.error("Este documento não tem arquivo nem link cadastrado. Edite-o para corrigir.");
+      return;
+    }
+
+    const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
+
+    /*
+     * O atributo `download` do <a> só é respeitado pelo navegador quando o link é
+     * da mesma origem, ou uma blob: URL. A URL assinada do Storage é de outro domínio,
+     * então sem isso o navegador abre o PDF em vez de salvar. Buscamos o arquivo como
+     * blob e criamos uma URL local — só aí o "Salvar como" acontece de fato.
+     */
     try {
-      const url = await obterUrlDocumento(doc);
-      if (!url) {
-        toast.error("Este documento não tem arquivo nem link cadastrado. Edite-o para corrigir.");
-        return;
-      }
+      const resposta = await fetch(url);
+      if (!resposta.ok) throw new Error("Falha ao buscar o arquivo.");
+      const blob = await resposta.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
-      link.download = doc.file_name || `${doc.titulo}.pdf`;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
+      link.href = blobUrl;
+      link.download = nomeArquivo;
       document.body.appendChild(link);
       link.click();
       link.remove();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+    } catch {
+      /*
+       * Provavelmente um link externo (tipo "link") cujo servidor não libera CORS
+       * para leitura via fetch. Nesse caso não há como forçar o download a partir
+       * de outra origem — abrimos o PDF numa aba para a pessoa salvar por lá.
+       */
+      toast.error("Esse link não permite baixar direto por aqui. Abrindo o PDF para você salvar pela aba do navegador.");
+      window.open(url, "_blank", "noopener,noreferrer");
     }
   }
 
@@ -828,14 +850,32 @@ function Portal() {
         </div>
       </main>
 
-      <footer className="shrink-0 border-t border-border bg-card">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-6 py-2.5 text-xs text-muted-foreground">
-          <span>SVB · Sun Visor Brasil — uso interno</span>
-          <span className="flex flex-wrap items-center gap-1">
-            Problema com um documento ou com o acesso? Escreva para
-            <LinkSuporte assunto="Suporte — Portal de Documentos SVB" />
-            informando seu nome, o documento e o que aconteceu.
-          </span>
+      <footer className="shrink-0 border-t border-border bg-secondary/50">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-brand font-display text-[10px] font-bold tracking-wide text-primary-foreground">
+              SVB
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Sun Visor Brasil <span className="text-border">·</span> uso interno
+            </span>
+          </div>
+
+          <a
+            href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Suporte — Portal de Documentos SVB")}`}
+            title="Informe seu nome, o documento e o que aconteceu"
+            className="group flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 transition-colors hover:border-gold"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors group-hover:bg-gold/20">
+              <Mail className="h-3 w-3" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-brand">
+              Precisa de ajuda?
+            </span>
+            <span className="hidden text-xs font-semibold text-brand sm:inline">
+              {EMAIL_SUPORTE}
+            </span>
+          </a>
         </div>
       </footer>
 
