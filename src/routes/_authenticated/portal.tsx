@@ -247,6 +247,14 @@ function Portal() {
   async function alternarFavorito(documentoId: string) {
     if (!usuarioId) return;
     const marcado = favoritos.includes(documentoId);
+    const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
+    const favoritosAnteriores = [...favoritos];
+    const favoritosAtualizados = marcado
+      ? favoritos.filter((id) => id !== documentoId)
+      : [...favoritos, documentoId];
+
+    queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAtualizados);
+
     const resultado = marcado
       ? await supabase
           .from("documentos_favoritos")
@@ -257,10 +265,11 @@ function Portal() {
           .from("documentos_favoritos")
           .insert({ user_id: usuarioId, documento_id: documentoId });
     if (resultado.error) {
+      queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAnteriores);
       toast.error(`Não foi possível atualizar o favorito: ${resultado.error.message}`);
       return;
     }
-    queryClient.invalidateQueries({ queryKey: ["documentos-favoritos", usuarioId] });
+    await queryClient.invalidateQueries({ queryKey: chaveFavoritos });
   }
 
   async function obterUrlDocumento(doc: Documento) {
@@ -314,6 +323,20 @@ function Portal() {
     if (error) {
       toast.error("Não foi possível remover o documento.");
       return;
+    }
+    if (usuarioId) {
+      const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
+      const chaveRecentes = ["documentos-recentes", usuarioId] as const;
+      queryClient.setQueryData<string[]>(chaveFavoritos, (atuais = []) =>
+        atuais.filter((id) => id !== doc.id),
+      );
+      queryClient.setQueryData<string[]>(chaveRecentes, (atuais = []) =>
+        atuais.filter((id) => id !== doc.id),
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: chaveFavoritos }),
+        queryClient.invalidateQueries({ queryKey: chaveRecentes }),
+      ]);
     }
     toast.success("Documento removido.");
     queryClient.invalidateQueries({ queryKey: ["documentos"] });
