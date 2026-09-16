@@ -79,7 +79,11 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          pode_atualizar: boolean
+          pode_excluir: boolean
+          pode_ler: boolean
           status: string
+          tipo_usuario: string
         }
         Insert: {
           aprovado?: boolean
@@ -91,7 +95,11 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          pode_atualizar?: boolean
+          pode_excluir?: boolean
+          pode_ler?: boolean
           status?: string
+          tipo_usuario?: string
         }
         Update: {
           aprovado?: boolean
@@ -103,7 +111,11 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          pode_atualizar?: boolean
+          pode_excluir?: boolean
+          pode_ler?: boolean
           status?: string
+          tipo_usuario?: string
         }
         Relationships: []
       }
@@ -141,6 +153,16 @@ export type Database = {
         Returns: boolean
       }
       is_aprovado: { Args: { _user_id: string }; Returns: boolean }
+      definir_permissoes_usuario: {
+        Args: {
+          _pode_atualizar: boolean
+          _pode_excluir: boolean
+          _pode_ler: boolean
+          _tipo_usuario: string
+          _usuario_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "membro"

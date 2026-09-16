@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Clock, Mail, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Status = "pendente" | "aprovado" | "recusado";
 const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
@@ -16,6 +17,10 @@ type Pessoa = {
   email: string | null;
   status: string;
   created_at: string;
+  tipo_usuario: "admin" | "membro";
+  pode_ler: boolean;
+  pode_atualizar: boolean;
+  pode_excluir: boolean;
 };
 
 export const Route = createFileRoute("/_authenticated/aprovacoes")({
@@ -88,7 +93,9 @@ function Aprovacoes() {
     queryFn: async (): Promise<Pessoa[]> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, display_name, email, status, created_at")
+        .select(
+          "id, display_name, email, status, created_at, tipo_usuario, pode_ler, pode_atualizar, pode_excluir",
+        )
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Pessoa[];
@@ -137,6 +144,25 @@ function Aprovacoes() {
       return;
     }
     toast.success("Email de redefinição enviado.");
+  }
+
+  async function salvarPermissoes(
+    pessoa: Pessoa,
+    permissoes: Pick<Pessoa, "tipo_usuario" | "pode_ler" | "pode_atualizar" | "pode_excluir">,
+  ) {
+    const { error } = await supabase.rpc("definir_permissoes_usuario", {
+      _usuario_id: pessoa.id,
+      _tipo_usuario: permissoes.tipo_usuario,
+      _pode_ler: permissoes.pode_ler,
+      _pode_atualizar: permissoes.pode_atualizar,
+      _pode_excluir: permissoes.pode_excluir,
+    });
+    if (error) {
+      toast.error("Não foi possível salvar as permissões.");
+      return;
+    }
+    toast.success(`Permissões de ${pessoa.display_name || pessoa.email} atualizadas.`);
+    queryClient.invalidateQueries({ queryKey: ["acessos"] });
   }
 
   if (verificando) {
@@ -236,6 +262,7 @@ function Aprovacoes() {
               icone={<ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />}
               acoes={(p) => (
                 <div className="flex flex-wrap gap-2">
+                  <EditorPermissoes pessoa={p} onSalvar={(permissoes) => salvarPermissoes(p, permissoes)} />
                   <Button
                     size="sm"
                     variant="outline"
@@ -317,5 +344,85 @@ function Secao({
         </ul>
       )}
     </section>
+  );
+}
+
+function EditorPermissoes({
+  pessoa,
+  onSalvar,
+}: {
+  pessoa: Pessoa;
+  onSalvar: (
+    permissoes: Pick<Pessoa, "tipo_usuario" | "pode_ler" | "pode_atualizar" | "pode_excluir">,
+  ) => Promise<void>;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [tipoUsuario, setTipoUsuario] = useState(pessoa.tipo_usuario);
+  const [podeLer, setPodeLer] = useState(pessoa.pode_ler);
+  const [podeAtualizar, setPodeAtualizar] = useState(pessoa.pode_atualizar);
+  const [podeExcluir, setPodeExcluir] = useState(pessoa.pode_excluir);
+  const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    setTipoUsuario(pessoa.tipo_usuario);
+    setPodeLer(pessoa.pode_ler);
+    setPodeAtualizar(pessoa.pode_atualizar);
+    setPodeExcluir(pessoa.pode_excluir);
+  }, [pessoa]);
+
+  async function salvar() {
+    setSalvando(true);
+    await onSalvar({
+      tipo_usuario: tipoUsuario,
+      pode_ler: podeLer,
+      pode_atualizar: podeAtualizar,
+      pode_excluir: podeExcluir,
+    });
+    setSalvando(false);
+    setAberto(false);
+  }
+
+  if (!aberto) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => setAberto(true)}>
+        Permissões
+      </Button>
+    );
+  }
+
+  return (
+    <div className="basis-full rounded-sm border border-border bg-background p-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold text-brand">Permissões do usuário</p>
+        <select
+          value={tipoUsuario}
+          onChange={(e) => setTipoUsuario(e.target.value as Pessoa["tipo_usuario"])}
+          className="h-8 rounded-sm border border-border bg-card px-2 text-xs"
+        >
+          <option value="membro">Usuário comum</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {[
+          ["Ler documentos", podeLer, setPodeLer],
+          ["Adicionar e atualizar", podeAtualizar, setPodeAtualizar],
+          ["Excluir documentos", podeExcluir, setPodeExcluir],
+        ].map(([label, marcado, setMarcado]) => (
+          <label key={label as string} className="flex items-center gap-2 text-xs">
+            <Checkbox checked={marcado as boolean} onCheckedChange={setMarcado as (value: boolean) => void} />
+            {label as string}
+          </label>
+        ))}
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button size="sm" variant="ghost" onClick={() => setAberto(false)}>
+          Cancelar
+        </Button>
+        <Button size="sm" disabled={salvando} onClick={() => void salvar()}>
+          {salvando ? "Salvando..." : "Salvar permissões"}
+        </Button>
+      </div>
+    </div>
   );
 }

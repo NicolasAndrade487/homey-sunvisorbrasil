@@ -117,10 +117,17 @@ function Portal() {
           aprovado: false,
           status: "pendente",
           admin: false,
+          podeLer: false,
+          podeAtualizar: false,
+          podeExcluir: false,
           email: email ?? null,
         };
       const [{ data: perfil }, { data: papeis, error: erroPapeis }] = await Promise.all([
-        supabase.from("profiles").select("aprovado, status, email").eq("id", uid).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("aprovado, status, email, pode_ler, pode_atualizar, pode_excluir")
+          .eq("id", uid)
+          .maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", uid),
       ]);
       const emailNormalizado = (perfil?.email ?? email ?? "").toLowerCase();
@@ -129,11 +136,17 @@ function Portal() {
         ADMIN_EMAILS.includes(emailNormalizado as (typeof ADMIN_EMAILS)[number]);
       const status = perfil?.status ?? (admin ? "aprovado" : "pendente");
       const aprovado = Boolean(perfil?.aprovado || status === "aprovado" || admin);
+      const podeLer = admin || Boolean(perfil?.pode_ler);
+      const podeAtualizar = admin || Boolean(perfil?.pode_atualizar);
+      const podeExcluir = admin || Boolean(perfil?.pode_excluir);
 
       return {
         aprovado,
         status,
         admin,
+        podeLer,
+        podeAtualizar,
+        podeExcluir,
         email: perfil?.email ?? email ?? null,
       };
     },
@@ -143,7 +156,7 @@ function Portal() {
 
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ["documentos"],
-    enabled: aprovado,
+    enabled: aprovado && Boolean(acesso?.podeLer),
     queryFn: async (): Promise<Documento[]> => {
       const { data, error } = await supabase
         .from("documentos")
@@ -283,6 +296,19 @@ function Portal() {
     );
   }
 
+  if (!acesso?.podeLer) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+        <ShieldCheck className="h-8 w-8 text-brand" />
+        <h1 className="font-display text-xl font-semibold">Leitura não autorizada</h1>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Sua conta está aprovada, mas ainda não recebeu permissão para consultar os documentos.
+        </p>
+        <Button variant="outline" onClick={sair}>Sair</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
@@ -310,7 +336,7 @@ function Portal() {
                 className="border-primary-foreground/20 bg-primary-foreground/10 pl-9 text-primary-foreground placeholder:text-primary-foreground/45 focus-visible:border-gold"
               />
             </div>
-            {aprovado ? (
+            {acesso?.podeAtualizar ? (
               <Button
                 className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                 onClick={() => {
@@ -428,7 +454,7 @@ function Portal() {
                 ? "Ainda não há documentos cadastrados. Adicione o primeiro."
                 : "Ajuste a busca ou escolha outra categoria."}
             </p>
-            {aprovado ? (
+            {acesso?.podeAtualizar ? (
               <Button
                 className="mt-5 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                 onClick={() => {
@@ -494,7 +520,7 @@ function Portal() {
                         : ""}
                     </span>
                     <div className="flex items-center gap-1">
-                      {aprovado ? (
+                      {acesso?.podeAtualizar ? (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -508,7 +534,7 @@ function Portal() {
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       ) : null}
-                      {acesso?.admin ? (
+                      {acesso?.podeExcluir ? (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -694,31 +720,6 @@ function FormularioDocumento({
         } catch {
           throw new Error("Informe um link válido, começando com https://");
         }
-                      {aprovado ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground"
-                          title="Editar"
-                          onClick={() => {
-                            setEditando(doc);
-                            setModalAberto(true);
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : null}
-                      {acesso?.admin ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          title="Remover"
-                          onClick={() => setParaExcluir(doc)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : null}
       }
 
       if (documento) {
