@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Clock, Mail, ShieldCheck, X } from "lucide-react";
 
@@ -66,9 +67,24 @@ function Aprovacoes() {
     },
   });
 
+  useEffect(() => {
+    if (souAdmin !== true) return;
+    const canal = supabase
+      .channel("acessos-profiles")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["acessos"] });
+      })
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(canal);
+    };
+  }, [souAdmin, queryClient]);
+
   const { data: pessoas = [], isLoading } = useQuery({
     queryKey: ["acessos"],
     enabled: souAdmin === true,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<Pessoa[]> => {
       const { data, error } = await supabase
         .from("profiles")

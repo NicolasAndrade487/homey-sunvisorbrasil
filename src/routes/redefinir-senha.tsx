@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { ChecklistSenha } from "@/components/checklist-senha";
+import { MIN_SENHA, primeiroErroSenha } from "@/lib/senha";
 
 export const Route = createFileRoute("/redefinir-senha")({
   ssr: false,
@@ -26,8 +28,9 @@ function RedefinirSenha() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (senha.length < 6) {
-      toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+    const erro = primeiroErroSenha(senha);
+    if (erro) {
+      toast.error(`Senha fraca: ${erro.toLowerCase()}.`);
       return;
     }
     if (senha !== confirmacao) {
@@ -65,11 +68,12 @@ function RedefinirSenha() {
               id="nova-senha"
               type="password"
               required
-              minLength={6}
+              minLength={MIN_SENHA}
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               autoComplete="new-password"
             />
+            <ChecklistSenha senha={senha} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="confirmar-senha">Confirmar nova senha</Label>
@@ -77,7 +81,7 @@ function RedefinirSenha() {
               id="confirmar-senha"
               type="password"
               required
-              minLength={6}
+              minLength={MIN_SENHA}
               value={confirmacao}
               onChange={(e) => setConfirmacao(e.target.value)}
               autoComplete="new-password"

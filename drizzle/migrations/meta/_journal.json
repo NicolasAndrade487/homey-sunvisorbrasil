@@ -22,6 +22,13 @@
       "when": 1789469961836,
       "tag": "0002_unique_profile_email",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789556281095,
+      "tag": "0003_profiles_realtime",
+      "breakpoints": true
     }
   ]
 }
