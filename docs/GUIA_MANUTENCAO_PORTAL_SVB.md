@@ -107,6 +107,17 @@ A tabela `documentos_auditoria` registra:
 Os triggers sao criados em `20260916160000_auditoria_historico_documentos.sql`.
 Se a tela estiver vazia, verifique se essa migracao foi executada e se o usuario atual e admin.
 
+## Alterar caixa de dialogo
+
+-frase:Nenhum snapshot anterior foi registrado. Revisões preenchidas antes da ativação do histórico não podem ser reconstruídas automaticamente; a próxima edição criará a primeira versão aqui.
+-arquivo:`src/routes/_authenticated/portal.tsx`
+-Linha:1247.
+
+## Adicionar novas categorias
+
+-adicionar em portal o icone:`src/routes/_authenticated/portal.tsx`.
+-adiconar a categoria:`src/lib/documentos.ts`.
+
 ## Historico de versoes
 
 Cada `UPDATE` em `public.documentos` salva o estado anterior em `documentos_versoes`.

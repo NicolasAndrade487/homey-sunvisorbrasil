@@ -1,6 +1,5 @@
 export const CATEGORIAS = [
   "Manual de Instalação",
-  "Manual técnico",
   "Ficha Técnica",
   "Catálogo",
   "Certificado",
