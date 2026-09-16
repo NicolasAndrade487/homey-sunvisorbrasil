@@ -85,6 +85,7 @@ export const Route = createFileRoute("/_authenticated/portal")({
 
 const ICONES: Record<string, typeof FileText> = {
   "Manual de Instalação": FileText,
+  "Manual técnico":FileText,
   "Ficha Técnica": Table2,
   Catálogo: BookOpen,
   Certificado: BadgeCheck,
