@@ -5,6 +5,7 @@ import { FileText, Lock, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,7 +45,11 @@ function Home() {
     <div className="min-h-screen bg-background">
       <div className="bg-brand-deep bg-gradient-to-br from-brand-deep via-brand to-brand text-primary-foreground">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
+<<<<<<< HEAD
           <BrandLogo className="h-auto w-full max-w-[420px] object-contain" />
+=======
+          <BrandLogo className="w-full max-w-3xl drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" />
+>>>>>>> 7b24a89a4c229ba1957eb88d58e780c3f39c9e6a
           <div>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               Portal de Manuais e Documentos
