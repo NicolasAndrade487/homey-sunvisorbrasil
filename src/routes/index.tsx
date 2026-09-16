@@ -44,7 +44,7 @@ function Home() {
     <div className="min-h-screen bg-background">
       <div className="bg-brand-deep bg-gradient-to-br from-brand-deep via-brand to-brand text-primary-foreground">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
-          <BrandLogo className="h-auto w-full max-w-[420px] object-contain" />
+          <BrandLogo className="h-auto max-h-[72px] w-auto max-w-[220px] object-contain" />
           <div>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               Portal de Manuais e Documentos

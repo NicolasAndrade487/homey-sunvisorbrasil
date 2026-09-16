@@ -212,7 +212,7 @@ function Portal() {
   if (!aprovado) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-        <BrandLogo className="mb-8 w-full max-w-md" />
+        <BrandLogo className="mb-8 h-auto max-h-[72px] w-auto max-w-[180px] object-contain" />
         <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
           <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
           <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
@@ -245,7 +245,7 @@ function Portal() {
       <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-5">
           <div className="flex flex-shrink-0 items-center gap-4">
-            <BrandLogo className="h-14 w-auto max-w-[220px] object-contain" />
+            <BrandLogo className="h-auto max-h-[52px] w-auto max-w-[180px] object-contain" />
             <span className="hidden h-8 w-px bg-primary-foreground/25 sm:block" />
             <div className="hidden font-display text-sm leading-tight text-primary-foreground/70 sm:block">
               <strong className="block text-base font-semibold text-primary-foreground">
