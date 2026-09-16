@@ -310,7 +310,7 @@ function Portal() {
                 className="border-primary-foreground/20 bg-primary-foreground/10 pl-9 text-primary-foreground placeholder:text-primary-foreground/45 focus-visible:border-gold"
               />
             </div>
-            {acesso?.admin ? (
+            {aprovado ? (
               <Button
                 className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                 onClick={() => {
@@ -428,7 +428,7 @@ function Portal() {
                 ? "Ainda não há documentos cadastrados. Adicione o primeiro."
                 : "Ajuste a busca ou escolha outra categoria."}
             </p>
-            {acesso?.admin ? (
+            {aprovado ? (
               <Button
                 className="mt-5 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                 onClick={() => {
@@ -460,9 +460,15 @@ function Portal() {
                       <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
                         {doc.categoria}
                       </span>
-                      {desatualizado ? (
-                        <span className="rounded-full bg-destructive/10 px-2.5 py-1 text-[10.5px] font-semibold text-destructive">
-                          Desatualizado
+                      {doc.data_vigencia ? (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
+                            desatualizado
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-emerald-500/10 text-emerald-700"
+                          }`}
+                        >
+                          {desatualizado ? "Desatualizado" : "Vigente"}
                         </span>
                       ) : null}
                     </div>
@@ -488,30 +494,30 @@ function Portal() {
                         : ""}
                     </span>
                     <div className="flex items-center gap-1">
+                      {aprovado ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          title="Editar"
+                          onClick={() => {
+                            setEditando(doc);
+                            setModalAberto(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
                       {acesso?.admin ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground"
-                            title="Editar"
-                            onClick={() => {
-                              setEditando(doc);
-                              setModalAberto(true);
-                            }}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            title="Remover"
-                            onClick={() => setParaExcluir(doc)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Remover"
+                          onClick={() => setParaExcluir(doc)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       ) : null}
                       <Button
                         variant="ghost"
@@ -688,33 +694,31 @@ function FormularioDocumento({
         } catch {
           throw new Error("Informe um link válido, começando com https://");
         }
-        campos = {
-          ...campos,
-          tipo: "link",
-          url,
-          storage_path: null,
-          file_name: null,
-          file_size: null,
-        };
-      } else if (arquivo) {
-        if (arquivo.size > LIMITE_BYTES) {
-          throw new Error("O arquivo passa de 50 MB. Use a opção de link.");
-        }
-        const caminho = `${userId}/${crypto.randomUUID()}-${arquivo.name}`;
-        const { error: erroUpload } = await supabase.storage
-          .from("documentos")
-          .upload(caminho, arquivo, { contentType: arquivo.type || "application/pdf" });
-        if (erroUpload) throw new Error("Falha ao enviar o arquivo.");
-        campos = {
-          ...campos,
-          tipo: "file",
-          url: null,
-          storage_path: caminho,
-          file_name: arquivo.name,
-          file_size: arquivo.size,
-        };
-      } else if (!documento || documento.tipo !== "file") {
-        throw new Error("Selecione um arquivo PDF ou use a opção de link.");
+                      {aprovado ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          title="Editar"
+                          onClick={() => {
+                            setEditando(doc);
+                            setModalAberto(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
+                      {acesso?.admin ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          title="Remover"
+                          onClick={() => setParaExcluir(doc)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
       }
 
       if (documento) {
