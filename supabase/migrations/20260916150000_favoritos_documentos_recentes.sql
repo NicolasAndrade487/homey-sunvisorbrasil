@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS public.documentos_recentes (
 CREATE INDEX IF NOT EXISTS documentos_recentes_usuario_data_idx
   ON public.documentos_recentes (user_id, acessado_em DESC);
 
+GRANT SELECT, INSERT, DELETE ON public.documentos_favoritos TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.documentos_recentes TO authenticated;
+
 ALTER TABLE public.documentos_favoritos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.documentos_recentes ENABLE ROW LEVEL SECURITY;
 

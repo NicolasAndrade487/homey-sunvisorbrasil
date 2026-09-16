@@ -9,6 +9,7 @@ import {
   Clock3,
   Download,
   FileText,
+  History,
   HelpCircle,
   LayoutGrid,
   List,
@@ -103,11 +104,13 @@ function Portal() {
   const [visualizacao, setVisualizacao] = useState<"grade" | "lista">("grade");
   const [filtroRapido, setFiltroRapido] = useState<"todos" | "favoritos" | "recentes">("todos");
   const [modalAberto, setModalAberto] = useState(false);
+  const [importacaoAberta, setImportacaoAberta] = useState(false);
   
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
   const [documentoPreview, setDocumentoPreview] = useState<Documento | null>(null);
   const [urlPreview, setUrlPreview] = useState<string | null>(null);
+  const [documentoHistorico, setDocumentoHistorico] = useState<Documento | null>(null);
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
@@ -252,7 +255,7 @@ function Portal() {
           .from("documentos_favoritos")
           .insert({ user_id: usuarioId, documento_id: documentoId });
     if (resultado.error) {
-      toast.error("Não foi possível atualizar o favorito.");
+      toast.error(`Não foi possível atualizar o favorito: ${resultado.error.message}`);
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["documentos-favoritos", usuarioId] });
@@ -403,16 +406,27 @@ function Portal() {
               />
             </div>
             {acesso?.podeAtualizar ? (
-              <Button
-                className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
-                onClick={() => {
-                  setEditando(null);
-                  setModalAberto(true);
-                }}
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Adicionar</span>
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  title="Importar vários PDFs"
+                  className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  onClick={() => setImportacaoAberta(true)}
+                >
+                  <UploadCloud className="h-4 w-4" />
+                </Button>
+                <Button
+                  className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+                  onClick={() => {
+                    setEditando(null);
+                    setModalAberto(true);
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Adicionar</span>
+                </Button>
+              </>
             ) : null}
             {acesso?.admin ? (
               <Button
@@ -649,6 +663,15 @@ function Portal() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-muted-foreground"
+                        title="Ver histórico"
+                        onClick={() => setDocumentoHistorico(doc)}
+                      >
+                        <History className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground"
                         title="Baixar"
                         onClick={() => void baixarDocumento(doc)}
                       >
@@ -676,6 +699,15 @@ function Portal() {
         onFechar={() => setModalAberto(false)}
         onSalvo={() => {
           setModalAberto(false);
+          queryClient.invalidateQueries({ queryKey: ["documentos"] });
+        }}
+      />
+
+      <ImportacaoLote
+        aberto={importacaoAberta}
+        onFechar={() => setImportacaoAberta(false)}
+        onSalvo={() => {
+          setImportacaoAberta(false);
           queryClient.invalidateQueries({ queryKey: ["documentos"] });
         }}
       />
@@ -718,6 +750,21 @@ function Portal() {
                 Baixar PDF
               </Button>
             </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(documentoHistorico)}
+        onOpenChange={(aberto) => !aberto && setDocumentoHistorico(null)}
+      >
+        <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display">Histórico de versões</DialogTitle>
+            <DialogDescription>{documentoHistorico?.titulo}</DialogDescription>
+          </DialogHeader>
+          {documentoHistorico ? (
+            <HistoricoDocumento documentoId={documentoHistorico.id} />
           ) : null}
         </DialogContent>
       </Dialog>
@@ -1013,6 +1060,156 @@ function FormularioDocumento({
             </Button>
             <Button type="submit" className="font-semibold" disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar documento"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function HistoricoDocumento({ documentoId }: { documentoId: string }) {
+  const { data: versoes = [], isLoading } = useQuery({
+    queryKey: ["documento-versoes", documentoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documentos_versoes")
+        .select("versao, criado_em, dados")
+        .eq("documento_id", documentoId)
+        .order("versao", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  if (isLoading) {
+    return <p className="py-6 text-sm text-muted-foreground">Carregando histórico...</p>;
+  }
+
+  if (versoes.length === 0) {
+    return (
+      <p className="py-6 text-sm text-muted-foreground">
+        Nenhuma versão anterior foi registrada ainda.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="space-y-2">
+      {versoes.map((versao) => {
+        const dados = versao.dados as { titulo?: string; descricao?: string | null; file_name?: string | null };
+        return (
+          <li key={versao.versao} className="rounded-sm border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold">Versão {versao.versao}</p>
+              <time className="text-xs text-muted-foreground">
+                {formatarData(versao.criado_em)}
+              </time>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {dados.file_name || dados.titulo || "Documento"}
+              {dados.descricao ? ` · ${dados.descricao}` : ""}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function ImportacaoLote({
+  aberto,
+  onFechar,
+  onSalvo,
+}: {
+  aberto: boolean;
+  onFechar: () => void;
+  onSalvo: () => void;
+}) {
+  const [arquivos, setArquivos] = useState<File[]>([]);
+  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
+  const [importando, setImportando] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function importar(e: React.FormEvent) {
+    e.preventDefault();
+    if (arquivos.length === 0) {
+      toast.error("Selecione pelo menos um PDF.");
+      return;
+    }
+    setImportando(true);
+    try {
+      const { data: sessao } = await supabase.auth.getUser();
+      const userId = sessao.user?.id;
+      if (!userId) throw new Error("Sessão expirada. Entre novamente.");
+
+      for (const arquivo of arquivos) {
+        if (arquivo.size > LIMITE_BYTES) throw new Error(`${arquivo.name} passa de 50 MB.`);
+        const caminho = `${userId}/${crypto.randomUUID()}-${arquivo.name}`;
+        const { error: erroUpload } = await supabase.storage
+          .from("documentos")
+          .upload(caminho, arquivo, { contentType: "application/pdf" });
+        if (erroUpload) throw new Error(`Falha ao enviar ${arquivo.name}.`);
+        const { error } = await supabase.from("documentos").insert({
+          titulo: arquivo.name.replace(/\.pdf$/i, ""),
+          categoria,
+          tipo: "file",
+          storage_path: caminho,
+          file_name: arquivo.name,
+          file_size: arquivo.size,
+          created_by: userId,
+        });
+        if (error) throw error;
+      }
+      toast.success(`${arquivos.length} PDF(s) importado(s).`);
+      setArquivos([]);
+      onSalvo();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível importar os PDFs.");
+    } finally {
+      setImportando(false);
+    }
+  }
+
+  return (
+    <Dialog open={aberto} onOpenChange={(aberto) => !aberto && onFechar()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-t-[3px] border-t-gold sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display">Importar PDFs</DialogTitle>
+          <DialogDescription>Adicione vários manuais de uma vez ao catálogo.</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={importar} className="space-y-4">
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => setArquivos(Array.from(e.target.files ?? []))}
+          />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="w-full rounded-sm border-[1.5px] border-dashed border-border px-4 py-6 text-center hover:border-gold hover:bg-gold/5"
+          >
+            <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
+              {arquivos.length ? `${arquivos.length} arquivo(s) selecionado(s)` : "Selecionar PDFs"}
+            </p>
+          </button>
+          <div className="space-y-1.5">
+            <Label htmlFor="categoria-lote">Categoria dos documentos</Label>
+            <Select value={categoria} onValueChange={setCategoria}>
+              <SelectTrigger id="categoria-lote"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onFechar}>Cancelar</Button>
+            <Button type="submit" disabled={importando}>
+              {importando ? "Importando..." : "Importar PDFs"}
             </Button>
           </div>
         </form>

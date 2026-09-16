@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      documentos_auditoria: {
+        Row: {
+          acao: string
+          criado_em: string
+          detalhes: Json | null
+          documento_id: string | null
+          id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          criado_em?: string
+          detalhes?: Json | null
+          documento_id?: string | null
+          id?: string
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          criado_em?: string
+          detalhes?: Json | null
+          documento_id?: string | null
+          id?: string
+          usuario_id?: string | null
+        }
+        Relationships: []
+      }
       documentos_favoritos: {
         Row: {
           created_at: string
@@ -101,6 +128,33 @@ export type Database = {
           acessado_em?: string
           documento_id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      documentos_versoes: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          dados: Json
+          documento_id: string
+          id: string
+          versao: number
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          dados: Json
+          documento_id: string
+          id?: string
+          versao: number
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          dados?: Json
+          documento_id?: string
+          id?: string
+          versao?: number
         }
         Relationships: []
       }
