@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FileText, Lock, Search } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -43,9 +44,7 @@ function Home() {
     <div className="min-h-screen bg-background">
       <div className="bg-brand-deep bg-gradient-to-br from-brand-deep via-brand to-brand text-primary-foreground">
         <div className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
-          <div className="font-display text-6xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:3px_3px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
-            SVB
-          </div>
+          <BrandLogo className="h-auto w-full max-w-[420px] object-contain" />
           <div>
             <h1 className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               Portal de Manuais e Documentos
