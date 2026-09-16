@@ -207,11 +207,12 @@ function AuthPage() {
               id="nova-senha"
               type="password"
               required
-              minLength={6}
+              minLength={MIN_SENHA}
               value={novaSenha}
               onChange={(e) => setNovaSenha(e.target.value)}
               autoComplete="new-password"
             />
+            <ChecklistSenha senha={novaSenha} />
           </div>
           <Button type="submit" className="w-full font-semibold" disabled={enviando}>
             {enviando ? "Atualizando..." : "Atualizar senha"}
@@ -286,7 +287,7 @@ function AuthPage() {
               id="nome"
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Ex: Nicolas Andrade"
+              placeholder="Nome e sobrenome"
               autoComplete="name"
             />
           </div>
@@ -309,12 +310,13 @@ function AuthPage() {
             id="senha"
             type="password"
             required
-            minLength={6}
+            minLength={modo === "criar" ? MIN_SENHA : 6}
             value={senha}
             onChange={(e) => setSenha(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
+            placeholder={modo === "criar" ? "Mínimo 10 caracteres" : "Sua senha"}
             autoComplete={modo === "entrar" ? "current-password" : "new-password"}
           />
+          {modo === "criar" && <ChecklistSenha senha={senha} />}
         </div>
         <Button type="submit" className="w-full font-semibold" disabled={enviando}>
           {enviando ? "Aguarde..." : modo === "entrar" ? "Entrar" : "Criar acesso"}
