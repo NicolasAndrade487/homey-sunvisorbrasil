@@ -250,17 +250,16 @@ function Aprovacoes() {
           </div>
           <div className="font-display text-sm leading-tight text-primary-foreground/70">
             <strong className="block text-base font-semibold text-primary-foreground">
-              Liberação de acessos
+              Gestão do portal
             </strong>
-            Quem pode entrar no portal
+            Usuários, permissões e auditoria
           </div>
           <Button
             asChild
-            variant="ghost"
-            className="ml-auto text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            className="ml-auto bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
           >
             <a href="#auditoria">
-              <ClipboardList className="h-4 w-4" /> Auditoria
+              <ClipboardList className="h-4 w-4" /> Ver logs
             </a>
           </Button>
           <Button
@@ -352,11 +351,14 @@ function Aprovacoes() {
               )}
             />
 
-            <section id="auditoria" className="scroll-mt-6 border-t border-border pt-8">
-              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand">
+            <section id="auditoria" className="scroll-mt-6 rounded-sm border border-border border-l-[3px] border-l-gold bg-card p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand">
                   <ClipboardList className="h-4 w-4" /> Auditoria do catálogo
-                </h2>
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">Acompanhe quem criou, atualizou ou excluiu documentos.</p>
+                </div>
                 <Input
                   value={buscaLog}
                   onChange={(e) => setBuscaLog(e.target.value)}
