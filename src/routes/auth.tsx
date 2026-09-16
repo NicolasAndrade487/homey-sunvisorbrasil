@@ -223,13 +223,19 @@ function AuthPage() {
   }
 
   if (emailEnviado) {
+    function voltarParaLogin() {
+      setEmailEnviado(false);
+      setSolicitandoRedefinicao(false);
+      setModo("entrar");
+    }
+
     return (
       <Shell>
         <h1 className="font-display text-xl font-semibold text-card-foreground">Email enviado</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Confira sua caixa de entrada e use o link para criar uma nova senha.
         </p>
-        <Button variant="outline" className="mt-6 w-full" onClick={() => setEmailEnviado(false)}>
+        <Button variant="outline" className="mt-6 w-full" onClick={voltarParaLogin}>
           Voltar para o login
         </Button>
       </Shell>
