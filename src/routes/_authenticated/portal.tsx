@@ -317,6 +317,24 @@ function Portal() {
     queryClient.invalidateQueries({ queryKey: ["documentos"] });
   }
 
+  async function restaurarVersao(versaoId: string) {
+    if (!window.confirm("Restaurar esta versão? A versão atual será preservada no histórico.")) {
+      return;
+    }
+    const { error } = await supabase.rpc("restaurar_versao_documento", {
+      _versao_id: versaoId,
+    });
+    if (error) {
+      toast.error(`Não foi possível restaurar: ${error.message}`);
+      return;
+    }
+    toast.success("Versão restaurada. A versão atual foi preservada no histórico.");
+    queryClient.invalidateQueries({ queryKey: ["documentos"] });
+    if (documentoHistorico) {
+      queryClient.invalidateQueries({ queryKey: ["documento-versoes", documentoHistorico.id] });
+    }
+  }
+
   async function sair() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -765,7 +783,11 @@ function Portal() {
             <DialogDescription>{documentoHistorico?.titulo}</DialogDescription>
           </DialogHeader>
           {documentoHistorico ? (
-            <HistoricoDocumento documentoId={documentoHistorico.id} />
+            <HistoricoDocumento
+              documentoId={documentoHistorico.id}
+              podeRestaurar={Boolean(acesso?.admin)}
+              onRestaurar={restaurarVersao}
+            />
           ) : null}
         </DialogContent>
       </Dialog>
@@ -1069,13 +1091,21 @@ function FormularioDocumento({
   );
 }
 
-function HistoricoDocumento({ documentoId }: { documentoId: string }) {
+function HistoricoDocumento({
+  documentoId,
+  podeRestaurar,
+  onRestaurar,
+}: {
+  documentoId: string;
+  podeRestaurar: boolean;
+  onRestaurar: (versaoId: string) => Promise<void>;
+}) {
   const { data: versoes = [], isLoading } = useQuery({
     queryKey: ["documento-versoes", documentoId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("documentos_versoes")
-        .select("versao, criado_em, dados")
+        .select("id, versao, criado_em, dados")
         .eq("documento_id", documentoId)
         .order("versao", { ascending: false });
       if (error) throw error;
@@ -1103,9 +1133,22 @@ function HistoricoDocumento({ documentoId }: { documentoId: string }) {
           <li key={versao.versao} className="rounded-sm border border-border p-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold">Versão {versao.versao}</p>
-              <time className="text-xs text-muted-foreground">
-                {formatarData(versao.criado_em)}
-              </time>
+              <div className="flex items-center gap-2">
+                <time className="text-xs text-muted-foreground">
+                  {formatarData(versao.criado_em)}
+                </time>
+                {podeRestaurar ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => void onRestaurar(versao.id)}
+                  >
+                    Restaurar
+                  </Button>
+                ) : null}
+              </div>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {dados.file_name || dados.titulo || "Documento"}

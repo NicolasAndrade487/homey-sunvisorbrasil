@@ -78,6 +78,50 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.restaurar_versao_documento(_versao_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  versao_anterior public.documentos_versoes%ROWTYPE;
+BEGIN
+  IF NOT public.usuario_admin() THEN
+    RAISE EXCEPTION 'PERMISSAO_NEGADA';
+  END IF;
+
+  SELECT * INTO versao_anterior
+  FROM public.documentos_versoes
+  WHERE id = _versao_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'VERSAO_NAO_ENCONTRADA';
+  END IF;
+
+  UPDATE public.documentos
+  SET titulo = COALESCE(versao_anterior.dados->>'titulo', titulo),
+      categoria = COALESCE(versao_anterior.dados->>'categoria', categoria),
+      descricao = versao_anterior.dados->>'descricao',
+      tipo = COALESCE(versao_anterior.dados->>'tipo', tipo),
+      url = versao_anterior.dados->>'url',
+      storage_path = versao_anterior.dados->>'storage_path',
+      file_name = versao_anterior.dados->>'file_name',
+      file_size = NULLIF(versao_anterior.dados->>'file_size', '')::bigint,
+      codigo_produto = versao_anterior.dados->>'codigo_produto',
+      versao = versao_anterior.dados->>'versao',
+      data_vigencia = NULLIF(versao_anterior.dados->>'data_vigencia', '')::date
+  WHERE id = versao_anterior.documento_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'DOCUMENTO_NAO_ENCONTRADO';
+  END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.restaurar_versao_documento(uuid) FROM anon, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.restaurar_versao_documento(uuid) TO authenticated;
+
 DROP TRIGGER IF EXISTS documentos_auditoria_trigger ON public.documentos;
 CREATE TRIGGER documentos_auditoria_trigger
 AFTER INSERT OR UPDATE OR DELETE ON public.documentos

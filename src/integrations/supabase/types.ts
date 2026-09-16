@@ -253,6 +253,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      restaurar_versao_documento: {
+        Args: { _versao_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "membro"
