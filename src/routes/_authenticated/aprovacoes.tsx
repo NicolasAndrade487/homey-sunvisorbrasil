@@ -12,6 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type Status = "pendente" | "aprovado" | "recusado";
 const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
+const EMAIL_SUPORTE = "suporte@sunvisorbrasil.com.br";
 
 type Pessoa = {
   id: string;
@@ -244,8 +245,8 @@ function Aprovacoes() {
   const liberados = pessoas.filter((p) => p.status === "aprovado");
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
+    <div className="flex h-screen [height:100dvh] flex-col overflow-hidden bg-background">
+      <header className="shrink-0 border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-5">
           <div className="font-display text-4xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
             SVB
@@ -275,170 +276,201 @@ function Aprovacoes() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl space-y-8 px-6 py-8">
-        <Tabs
-          value={abaAtiva}
-          onValueChange={(valor) => setAbaAtiva(valor as typeof abaAtiva)}
-          className="w-full"
-        >
-          <TabsList className="grid h-auto w-full grid-cols-2 rounded-sm border border-border bg-card p-1">
-            <TabsTrigger value="permissoes" className="py-2.5 text-sm">
-              Usuários e permissões
-            </TabsTrigger>
-            <TabsTrigger value="auditoria" className="gap-2 py-2.5 text-sm">
-              <ClipboardList className="h-4 w-4" /> Auditoria
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        {isLoading ? (
-          <p className="py-12 text-center text-sm text-muted-foreground">Carregando contas...</p>
-        ) : (
-          <>
-            {abaAtiva === "permissoes" ? (
-              <>
-            <Secao
-              titulo={`Aguardando liberação (${pendentes.length})`}
-              vazio="Nenhum pedido pendente."
-              itens={pendentes}
-              destaque
-              acoes={(p) => (
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
+          <Tabs
+            value={abaAtiva}
+            onValueChange={(valor) => setAbaAtiva(valor as typeof abaAtiva)}
+            className="w-full"
+          >
+            <TabsList className="grid h-auto w-full grid-cols-2 rounded-sm border border-border bg-card p-1">
+              <TabsTrigger value="permissoes" className="py-2.5 text-sm">
+                Usuários e permissões
+              </TabsTrigger>
+              <TabsTrigger value="auditoria" className="gap-2 py-2.5 text-sm">
+                <ClipboardList className="h-4 w-4" /> Auditoria
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {isLoading ? (
+            <p className="py-12 text-center text-sm text-muted-foreground">Carregando contas...</p>
+          ) : (
+            <>
+              {abaAtiva === "permissoes" ? (
                 <>
-                  <Button
-                    size="sm"
-                    className="bg-brand font-semibold text-primary-foreground hover:bg-brand/90"
-                    onClick={() => void definir(p, "aprovado")}
-                  >
-                    <Check className="h-4 w-4" /> Aprovar
-                  </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void enviarRedefinicao(p)}
-                    >
-                      <Mail className="h-4 w-4" /> Redefinir senha
-                    </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => void definir(p, "recusado")}
-                  >
-                    <X className="h-4 w-4" /> Recusar
-                  </Button>
-                </>
-              )}
-            />
+                  <Secao
+                    titulo={`Aguardando liberação (${pendentes.length})`}
+                    vazio="Nenhum pedido pendente."
+                    itens={pendentes}
+                    destaque
+                    acoes={(p) => (
+                      <>
+                        <Button
+                          size="sm"
+                          className="bg-brand font-semibold text-primary-foreground hover:bg-brand/90"
+                          onClick={() => void definir(p, "aprovado")}
+                        >
+                          <Check className="h-4 w-4" /> Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void enviarRedefinicao(p)}
+                        >
+                          <Mail className="h-4 w-4" /> Redefinir senha
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => void definir(p, "recusado")}
+                        >
+                          <X className="h-4 w-4" /> Recusar
+                        </Button>
+                      </>
+                    )}
+                  />
 
-            <Secao
-              titulo={`Com acesso (${liberados.length})`}
-              vazio="Ninguém liberado ainda."
-              itens={liberados}
-              icone={<ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />}
-              acoes={(p) => (
-                <div className="flex flex-wrap gap-2">
-                  <EditorPermissoes pessoa={p} onSalvar={(permissoes) => salvarPermissoes(p, permissoes)} />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void enviarRedefinicao(p)}
-                  >
-                    <Mail className="h-4 w-4" /> Redefinir senha
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive"
-                    onClick={() => void definir(p, "pendente")}
-                  >
-                    <X className="h-4 w-4" /> Bloquear
-                  </Button>
-                </div>
-              )}
-            />
-
-            <Secao
-              titulo={`Recusadas (${recusados.length})`}
-              vazio="Nenhuma conta recusada."
-              itens={recusados}
-              icone={<Clock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />}
-              acoes={(p) => (
-                <Button size="sm" variant="outline" onClick={() => void definir(p, "aprovado")}>
-                  <Check className="h-4 w-4" /> Liberar
-                </Button>
-              )}
-            />
-              </>
-            ) : null}
-
-            {abaAtiva === "auditoria" ? (
-            <section id="auditoria" className="rounded-sm border border-border border-l-[3px] border-l-gold bg-card p-4 shadow-sm sm:p-5">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand">
-                  <ClipboardList className="h-4 w-4" /> Auditoria do catálogo
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">Acompanhe quem criou, atualizou ou excluiu documentos.</p>
-                </div>
-                <Input
-                  value={buscaLog}
-                  onChange={(e) => setBuscaLog(e.target.value)}
-                  placeholder="Buscar documento ou usuário"
-                  className="h-8 w-full text-xs sm:w-56"
-                />
-              </div>
-              <div className="mb-3 grid grid-cols-4 gap-2">
-                {(["todos", "criado", "atualizado", "excluido"] as const).map((acao) => (
-                  <button
-                    key={acao}
-                    type="button"
-                    onClick={() => setFiltroLog(acao)}
-                    className={`rounded-sm border px-2 py-2 text-left transition-colors ${
-                      filtroLog === acao
-                        ? "border-brand bg-brand text-primary-foreground"
-                        : "border-border bg-card text-muted-foreground hover:border-brand/40"
-                    }`}
-                  >
-                    <span className="block text-[10px] uppercase tracking-wide opacity-75">
-                      {acao === "todos" ? "Total" : acao}
-                    </span>
-                    <strong className="text-base">{contagemLogs[acao]}</strong>
-                  </button>
-                ))}
-              </div>
-              {carregandoLogs ? (
-                <p className="py-6 text-sm text-muted-foreground">Carregando registros...</p>
-              ) : logsVisiveis.length === 0 ? (
-                <p className="py-6 text-sm text-muted-foreground">Nenhuma ação registrada.</p>
-              ) : (
-                <div className="overflow-hidden rounded-sm border border-border bg-card">
-                  {logsVisiveis.map((log) => {
-                    const pessoa = pessoas.find((item) => item.id === log.usuario_id);
-                    return (
-                      <div key={log.id} className="grid gap-2 border-b border-border p-3 last:border-b-0 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{log.detalhes?.titulo || "Documento sem título"}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {pessoa?.display_name || "Usuário não identificado"} · {pessoa?.email || log.usuario_id || "sem identificação"}
-                          </p>
-                        </div>
-                        <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
-                          log.acao === "excluido" ? "bg-destructive/10 text-destructive" : log.acao === "criado" ? "bg-emerald-500/10 text-emerald-700" : "bg-secondary text-brand"
-                        }`}>
-                          {log.acao}
-                        </span>
-                        <time className="text-xs text-muted-foreground sm:text-right">
-                          {new Date(log.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                        </time>
+                  <Secao
+                    titulo={`Com acesso (${liberados.length})`}
+                    vazio="Ninguém liberado ainda."
+                    itens={liberados}
+                    icone={<ShieldCheck className="h-4 w-4 flex-shrink-0 text-brand" />}
+                    acoes={(p) => (
+                      <div className="flex flex-wrap gap-2">
+                        <EditorPermissoes pessoa={p} onSalvar={(permissoes) => salvarPermissoes(p, permissoes)} />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void enviarRedefinicao(p)}
+                        >
+                          <Mail className="h-4 w-4" /> Redefinir senha
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          onClick={() => void definir(p, "pendente")}
+                        >
+                          <X className="h-4 w-4" /> Bloquear
+                        </Button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-            ) : null}
-          </>
-        )}
+                    )}
+                  />
+
+                  <Secao
+                    titulo={`Recusadas (${recusados.length})`}
+                    vazio="Nenhuma conta recusada."
+                    itens={recusados}
+                    icone={<Clock className="h-4 w-4 flex-shrink-0 text-muted-foreground" />}
+                    acoes={(p) => (
+                      <Button size="sm" variant="outline" onClick={() => void definir(p, "aprovado")}>
+                        <Check className="h-4 w-4" /> Liberar
+                      </Button>
+                    )}
+                  />
+                </>
+              ) : null}
+
+              {abaAtiva === "auditoria" ? (
+                <section id="auditoria" className="rounded-sm border border-border border-l-[3px] border-l-gold bg-card p-4 shadow-sm sm:p-5">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h2 className="flex items-center gap-2 font-display text-base font-semibold text-brand">
+                        <ClipboardList className="h-4 w-4" /> Auditoria do catálogo
+                      </h2>
+                      <p className="mt-1 text-xs text-muted-foreground">Acompanhe quem criou, atualizou ou excluiu documentos.</p>
+                    </div>
+                    <Input
+                      value={buscaLog}
+                      onChange={(e) => setBuscaLog(e.target.value)}
+                      placeholder="Buscar documento ou usuário"
+                      className="h-8 w-full text-xs sm:w-56"
+                    />
+                  </div>
+                  <div className="mb-3 grid grid-cols-4 gap-2">
+                    {(["todos", "criado", "atualizado", "excluido"] as const).map((acao) => (
+                      <button
+                        key={acao}
+                        type="button"
+                        onClick={() => setFiltroLog(acao)}
+                        className={`rounded-sm border px-2 py-2 text-left transition-colors ${
+                          filtroLog === acao
+                            ? "border-brand bg-brand text-primary-foreground"
+                            : "border-border bg-card text-muted-foreground hover:border-brand/40"
+                        }`}
+                      >
+                        <span className="block text-[10px] uppercase tracking-wide opacity-75">
+                          {acao === "todos" ? "Total" : acao}
+                        </span>
+                        <strong className="text-base">{contagemLogs[acao]}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  {carregandoLogs ? (
+                    <p className="py-6 text-sm text-muted-foreground">Carregando registros...</p>
+                  ) : logsVisiveis.length === 0 ? (
+                    <p className="py-6 text-sm text-muted-foreground">Nenhuma ação registrada.</p>
+                  ) : (
+                    <div className="overflow-hidden rounded-sm border border-border bg-card">
+                      {logsVisiveis.map((log) => {
+                        const pessoa = pessoas.find((item) => item.id === log.usuario_id);
+                        return (
+                          <div key={log.id} className="grid gap-2 border-b border-border p-3 last:border-b-0 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{log.detalhes?.titulo || "Documento sem título"}</p>
+                              <p className="truncate text-xs text-muted-foreground">
+                                {pessoa?.display_name || "Usuário não identificado"} · {pessoa?.email || log.usuario_id || "sem identificação"}
+                              </p>
+                            </div>
+                            <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
+                              log.acao === "excluido" ? "bg-destructive/10 text-destructive" : log.acao === "criado" ? "bg-emerald-500/10 text-emerald-700" : "bg-secondary text-brand"
+                            }`}>
+                              {log.acao}
+                            </span>
+                            <time className="text-xs text-muted-foreground sm:text-right">
+                              {new Date(log.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                            </time>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+              ) : null}
+            </>
+          )}
+        </div>
       </main>
+
+      <footer className="shrink-0 border-t border-border bg-secondary/50">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-2.5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-brand font-display text-[10px] font-bold tracking-wide text-primary-foreground">
+              SVB
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Sun Visor Brasil <span className="text-border">·</span> uso interno
+            </span>
+          </div>
+
+          <a
+            href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Suporte — Portal de Documentos SVB")}`}
+            title="Informe seu nome, o documento e o que aconteceu"
+            className="group flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 transition-colors hover:border-gold"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors group-hover:bg-gold/20">
+              <Mail className="h-3 w-3" />
+            </span>
+            <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-brand">
+              Precisa de ajuda?
+            </span>
+            <span className="hidden text-xs font-semibold text-brand sm:inline">
+              {EMAIL_SUPORTE}
+            </span>
+          </a>
+        </div>
+      </footer>
     </div>
   );
 }
