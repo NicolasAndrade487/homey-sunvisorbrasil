@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Clock, Mail, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, ClipboardList, Mail, ShieldCheck, X } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ type Pessoa = {
   pode_ler: boolean;
   pode_atualizar: boolean;
   pode_excluir: boolean;
+};
+
+type LogAuditoria = {
+  id: string;
+  documento_id: string | null;
+  usuario_id: string | null;
+  acao: "criado" | "atualizado" | "excluido";
+  detalhes: { titulo?: string; categoria?: string; tipo?: string } | null;
+  criado_em: string;
 };
 
 export const Route = createFileRoute("/_authenticated/aprovacoes")({
@@ -99,6 +108,23 @@ function Aprovacoes() {
         .order("created_at", { ascending: true });
       if (error) throw error;
       return data as Pessoa[];
+    },
+  });
+
+  const [filtroLog, setFiltroLog] = useState<"todos" | LogAuditoria["acao"]>("todos");
+  const { data: logs = [], isLoading: carregandoLogs } = useQuery({
+    queryKey: ["auditoria-documentos", filtroLog],
+    enabled: souAdmin === true,
+    queryFn: async (): Promise<LogAuditoria[]> => {
+      let consulta = supabase
+        .from("documentos_auditoria")
+        .select("id, documento_id, usuario_id, acao, detalhes, criado_em")
+        .order("criado_em", { ascending: false })
+        .limit(100);
+      if (filtroLog !== "todos") consulta = consulta.eq("acao", filtroLog);
+      const { data, error } = await consulta;
+      if (error) throw error;
+      return data as LogAuditoria[];
     },
   });
 
@@ -293,6 +319,51 @@ function Aprovacoes() {
                 </Button>
               )}
             />
+
+            <section className="border-t border-border pt-8">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 font-display text-sm font-semibold uppercase tracking-wide text-brand">
+                  <ClipboardList className="h-4 w-4" /> Auditoria do catálogo
+                </h2>
+                <select
+                  value={filtroLog}
+                  onChange={(e) => setFiltroLog(e.target.value as typeof filtroLog)}
+                  className="h-8 rounded-sm border border-border bg-card px-2 text-xs"
+                >
+                  <option value="todos">Todas as ações</option>
+                  <option value="criado">Criados</option>
+                  <option value="atualizado">Atualizados</option>
+                  <option value="excluido">Excluídos</option>
+                </select>
+              </div>
+              {carregandoLogs ? (
+                <p className="py-6 text-sm text-muted-foreground">Carregando registros...</p>
+              ) : logs.length === 0 ? (
+                <p className="py-6 text-sm text-muted-foreground">Nenhuma ação registrada.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {logs.map((log) => (
+                    <li key={log.id} className="rounded-sm border border-border bg-card p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">
+                          {log.acao === "criado"
+                            ? "Documento criado"
+                            : log.acao === "atualizado"
+                              ? "Documento atualizado"
+                              : "Documento excluído"}
+                        </p>
+                        <time className="text-xs text-muted-foreground">
+                          {new Date(log.criado_em).toLocaleString("pt-BR")}
+                        </time>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {log.detalhes?.titulo || "Documento sem título"} · usuário {log.usuario_id || "desconhecido"}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </>
         )}
       </main>

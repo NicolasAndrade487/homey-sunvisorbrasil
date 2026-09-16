@@ -661,12 +661,13 @@ function Portal() {
                       ) : null}
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground"
+                        size="sm"
+                        className="h-8 gap-1 px-2 text-xs text-muted-foreground"
                         title="Ver histórico"
                         onClick={() => setDocumentoHistorico(doc)}
                       >
                         <History className="h-3.5 w-3.5" />
+                        <span>Histórico</span>
                       </Button>
                       <Button
                         variant="ghost"
