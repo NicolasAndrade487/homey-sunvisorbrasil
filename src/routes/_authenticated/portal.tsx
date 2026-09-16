@@ -590,7 +590,7 @@ function Portal() {
         }}
       >
         <DialogContent className="flex h-[90vh] w-[calc(100%-1rem)] max-w-5xl flex-col gap-0 p-0">
-          <DialogHeader className="flex-col items-start gap-3 border-b border-border px-4 py-4 pr-12 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+          <DialogHeader className="border-b border-border px-4 py-4 pr-12 sm:px-5">
             <div className="min-w-0 max-w-full">
               <DialogTitle className="truncate font-display text-base sm:text-lg">
                 {documentoPreview?.titulo}
@@ -599,17 +599,6 @@ function Portal() {
                 Visualização do documento técnico selecionado.
               </DialogDescription>
             </div>
-            {documentoPreview ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => void baixarDocumento(documentoPreview)}
-              >
-                <Download className="h-4 w-4" />
-                Baixar
-              </Button>
-            ) : null}
           </DialogHeader>
           {urlPreview ? (
             <iframe
@@ -617,6 +606,18 @@ function Portal() {
               src={urlPreview}
               className="min-h-0 flex-1 bg-muted"
             />
+          ) : null}
+          {documentoPreview ? (
+            <div className="flex items-center justify-end border-t border-border bg-card px-4 py-3 sm:px-5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void baixarDocumento(documentoPreview)}
+              >
+                <Download className="h-4 w-4" />
+                Baixar PDF
+              </Button>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>
