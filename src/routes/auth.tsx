@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ChecklistSenha } from "@/components/checklist-senha";
+import { MIN_SENHA, primeiroErroSenha } from "@/lib/senha";
 
 const DOMINIOS = ["sunvisorbrasil.com.br", "sunvisorbrasil.com"] as const;
 
@@ -93,8 +95,9 @@ function AuthPage() {
 
   async function atualizarSenha(e: React.FormEvent) {
     e.preventDefault();
-    if (novaSenha.length < 6) {
-      toast.error("A nova senha precisa ter pelo menos 6 caracteres.");
+    const erroSenha = primeiroErroSenha(novaSenha);
+    if (erroSenha) {
+      toast.error(`Senha fraca: ${erroSenha.toLowerCase()}.`);
       return;
     }
     setEnviando(true);
@@ -117,6 +120,13 @@ function AuthPage() {
     if (modo === "criar" && !dominioValido) {
       toast.error(`Use seu email da empresa (ex: nome@${DOMINIOS[0]}).`);
       return;
+    }
+    if (modo === "criar") {
+      const erroForca = primeiroErroSenha(senha);
+      if (erroForca) {
+        toast.error(`Senha fraca: ${erroForca.toLowerCase()}.`);
+        return;
+      }
     }
     setEnviando(true);
     try {
