@@ -16,6 +16,7 @@ import {
   List,
   LogOut,
   Mail,
+  MoreHorizontal,
   Pencil,
   Plus,
   Search,
@@ -29,11 +30,19 @@ import {
   Eye,
 } from "lucide-react";
 
+import logoBranca from "@/assets/svb-logo-branca.png";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -510,11 +519,17 @@ function Portal() {
 
   if (!aprovado) {
     return (
-      <div className="flex min-h-screen [min-height:100dvh] flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-        <div className="mb-8 font-display text-5xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
-          SVB
-        </div>
-        <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
+      <div className="relative flex min-h-screen [min-height:100dvh] flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
+        <div
+          aria-hidden
+          className="absolute inset-0 z-0 opacity-[0.14]"
+          style={{
+            backgroundImage:
+              "radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
+          }}
+        />
+        <img src={logoBranca} alt="SVB Sun Visor Brasil" className="relative z-10 mb-8 h-12 w-auto sm:h-14" />
+        <div className="relative z-10 w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
           <ShieldCheck className="mx-auto h-8 w-8 text-brand" />
           <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
             {acesso?.status === "recusado" ? "Acesso recusado" : "Acesso aguardando liberação"}
@@ -540,7 +555,7 @@ function Portal() {
             className="mt-4 justify-center text-xs"
           />
         </div>
-        <p className="mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
+        <p className="relative z-10 mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
       </div>
     );
   }
@@ -565,12 +580,18 @@ function Portal() {
   return (
     /* Casca de altura fixa: só a área de cards rola. Header, filtros e rodapé ficam sempre visíveis. */
     <div className="flex h-screen [height:100dvh] flex-col overflow-hidden bg-background">
-      <header className="shrink-0 border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6 py-4">
-          <div className="flex flex-shrink-0 items-center gap-4">
-            <div className="font-display text-3xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
-              SVB
-            </div>
+      <header className="relative shrink-0 overflow-hidden border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
+        <div
+          aria-hidden
+          className="absolute inset-0 z-0 opacity-[0.14]"
+          style={{
+            backgroundImage:
+              "radial-gradient(120% 140% at 100% -30%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
+          }}
+        />
+        <div className="relative z-10 mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
+          <div className="flex flex-shrink-0 items-center gap-3 sm:gap-4">
+            <img src={logoBranca} alt="SVB Sun Visor Brasil" className="h-7 w-auto sm:h-8" />
             <span className="hidden h-8 w-px bg-primary-foreground/25 sm:block" />
             <div className="hidden font-display text-sm leading-tight text-primary-foreground/70 sm:block">
               <strong className="block text-base font-semibold text-primary-foreground">
@@ -580,7 +601,7 @@ function Portal() {
             </div>
           </div>
 
-          <div className="ml-auto flex flex-1 items-center gap-2 sm:max-w-md">
+          <div className="flex w-full items-center gap-1.5 sm:ml-auto sm:w-auto sm:max-w-md sm:gap-2">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary-foreground/50" />
               <Input
@@ -615,7 +636,7 @@ function Portal() {
                   <UploadCloud className="h-4 w-4" />
                 </Button>
                 <Button
-                  className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+                  className="shrink-0 bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
                   onClick={() => {
                     setEditando(null);
                     setModalAberto(true);
@@ -632,7 +653,7 @@ function Portal() {
                 variant="ghost"
                 size="icon"
                 title="Liberação de acessos"
-                className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                className="shrink-0 text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
               >
                 <Link to="/aprovacoes" aria-label="Liberação de acessos">
                   <ShieldCheck className="h-4 w-4" />
@@ -645,7 +666,7 @@ function Portal() {
               onClick={sair}
               title="Sair"
               aria-label="Sair"
-              className="text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+              className="shrink-0 text-primary-foreground/70 hover:bg-primary-foreground/10 hover:text-primary-foreground"
             >
               <LogOut className="h-4 w-4" />
             </Button>
@@ -657,7 +678,7 @@ function Portal() {
       {filtrosVisiveis ? (
         <>
           <nav className="shrink-0 border-b border-border bg-card" aria-label="Categorias">
-            <div className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-6">
+            <div className="mx-auto flex max-w-6xl gap-1.5 overflow-x-auto px-4 py-2.5 sm:px-6">
               {["Todos", ...CATEGORIAS].map((cat) => {
                 const ativo = categoriaAtiva === cat;
                 const total = cat === "Todos" ? documentos.length : (contagens[cat] ?? 0);
@@ -666,14 +687,20 @@ function Portal() {
                     key={cat}
                     onClick={() => setCategoriaAtiva(cat)}
                     aria-current={ativo ? "true" : undefined}
-                    className={`whitespace-nowrap border-b-[3px] px-4 py-3 text-sm transition-colors ${
+                    className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
                       ativo
-                        ? "border-b-gold font-semibold text-brand"
-                        : "border-b-transparent text-muted-foreground hover:text-brand"
+                        ? "bg-brand text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-secondary hover:text-brand"
                     }`}
                   >
                     {cat}
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">{total}</span>
+                    <span
+                      className={`ml-1.5 text-xs ${
+                        ativo ? "text-primary-foreground/70" : "text-muted-foreground"
+                      }`}
+                    >
+                      {total}
+                    </span>
                   </button>
                 );
               })}
@@ -681,7 +708,7 @@ function Portal() {
           </nav>
 
           <div className="shrink-0 border-b border-border bg-background">
-            <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-6 py-2">
+            <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 py-2 sm:px-6">
               {(
                 [
                   ["todos", "Todos", null],
@@ -712,7 +739,7 @@ function Portal() {
 
       {/* Barra de ferramentas: sempre visível, é o controle da lista logo abaixo. */}
       <div className="shrink-0 border-b border-border bg-background">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-6 py-2.5">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-baseline gap-2">
             <h1 className="truncate font-display text-lg font-semibold text-brand-deep">
               {categoriaAtiva === "Todos" ? "Todos os documentos" : categoriaAtiva}
@@ -737,7 +764,7 @@ function Portal() {
               {filtrosVisiveis ? "Ocultar filtros" : "Mostrar filtros"}
             </Button>
             <Select value={ordenacao} onValueChange={(valor) => setOrdenacao(valor as typeof ordenacao)}>
-              <SelectTrigger className="h-8 w-[145px] text-xs" aria-label="Ordenar documentos">
+              <SelectTrigger className="h-8 w-[130px] text-xs sm:w-[145px]" aria-label="Ordenar documentos">
                 <ArrowDownAZ className="h-3.5 w-3.5" />
                 <SelectValue />
               </SelectTrigger>
@@ -776,7 +803,7 @@ function Portal() {
 
       {/* Único elemento rolável da página. */}
       <main ref={areaCards} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-6xl px-6 py-5">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           {isLoading ? (
             <div
               className={
@@ -851,7 +878,7 @@ function Portal() {
       </main>
 
       <footer className="shrink-0 border-t border-border bg-secondary/50">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-2.5">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-brand font-display text-[10px] font-bold tracking-wide text-primary-foreground">
               SVB
@@ -1091,71 +1118,81 @@ function CartaoDocumento({
     </>
   );
 
-  const acoes = (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`h-7 w-7 ${favorito ? "text-gold" : "text-muted-foreground"}`}
-        title={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-        aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-        aria-pressed={favorito}
-        onClick={onAlternarFavorito}
-      >
-        <Star className={`h-4 w-4 ${favorito ? "fill-current" : ""}`} />
-      </Button>
-      {acesso?.podeAtualizar ? (
+  const botaoFavorito = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={`h-7 w-7 shrink-0 ${favorito ? "text-gold" : "text-muted-foreground"}`}
+      title={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+      aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+      aria-pressed={favorito}
+      onClick={onAlternarFavorito}
+    >
+      <Star className={`h-4 w-4 ${favorito ? "fill-current" : ""}`} />
+    </Button>
+  );
+
+  /* Editar, histórico e excluir moram no menu "···": deixa o card limpo e — diferente da
+     versão anterior, que escondia essas ações abaixo de "lg" na visão em lista — continua
+     acessível em qualquer largura de tela. */
+  const menuMais = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          className="h-7 w-7 text-muted-foreground"
-          title="Editar"
-          aria-label={`Editar ${doc.titulo}`}
-          onClick={onEditar}
+          className="h-7 w-7 shrink-0 text-muted-foreground"
+          title="Mais ações"
+          aria-label={`Mais ações para ${doc.titulo}`}
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <MoreHorizontal className="h-4 w-4" />
         </Button>
-      ) : null}
-      {acesso?.podeExcluir ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-          title="Remover"
-          aria-label={`Remover ${doc.titulo}`}
-          onClick={onExcluir}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      ) : null}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-muted-foreground"
-        title="Ver histórico de versões"
-        aria-label={`Histórico de ${doc.titulo}`}
-        onClick={onHistorico}
-      >
-        <History className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-7 w-7 text-muted-foreground"
-        title="Baixar"
-        aria-label={`Baixar ${doc.titulo}`}
-        onClick={onBaixar}
-      >
-        <Download className="h-3.5 w-3.5" />
-      </Button>
-      <Button
-        size="sm"
-        className="h-8 shrink-0 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
-        onClick={onVisualizar}
-      >
-        Visualizar <Eye className="h-3 w-3" />
-      </Button>
-    </div>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={onHistorico}>
+          <History className="h-3.5 w-3.5" /> Histórico de versões
+        </DropdownMenuItem>
+        {acesso?.podeAtualizar ? (
+          <DropdownMenuItem onClick={onEditar}>
+            <Pencil className="h-3.5 w-3.5" /> Editar
+          </DropdownMenuItem>
+        ) : null}
+        {acesso?.podeExcluir ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={onExcluir}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Remover
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const botaoBaixar = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 shrink-0 text-muted-foreground"
+      title="Baixar"
+      aria-label={`Baixar ${doc.titulo}`}
+      onClick={onBaixar}
+    >
+      <Download className="h-3.5 w-3.5" />
+    </Button>
+  );
+
+  const botaoVisualizar = (
+    <Button
+      size="sm"
+      className="h-8 shrink-0 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
+      onClick={onVisualizar}
+    >
+      Visualizar <Eye className="h-3 w-3" />
+    </Button>
   );
 
   const identificacao =
@@ -1174,35 +1211,38 @@ function CartaoDocumento({
     </span>
   );
 
-  /* Lista: uma linha compacta de verdade, para varrer muitos documentos de uma vez. */
+  /*
+   * Lista: pilha vertical no mobile (identificação em cima, ações embaixo alinhadas à
+   * direita) e vira uma linha só a partir de sm. As ações ficam sempre visíveis — a versão
+   * anterior as escondia por completo abaixo de "lg", o que travava edição/exclusão no
+   * celular e em tablets.
+   */
   if (emLista) {
     return (
-      <article className="flex items-center gap-3 rounded-sm border border-l-[3px] border-border border-l-brand bg-card px-4 py-3 transition-colors hover:border-l-gold">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-secondary">
-          <Icone className="h-4 w-4 text-brand" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <h2 className="min-w-0 truncate font-display text-base font-medium text-card-foreground">
-              {doc.titulo}
-            </h2>
-            {selos}
+      <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-3 transition-colors hover:border-l-gold sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-secondary">
+            <Icone className="h-4 w-4 text-brand" />
           </div>
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-            {identificacao}
-            {identificacao ? <span aria-hidden>·</span> : null}
-            {rodapeMeta}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="min-w-0 truncate font-display text-base font-medium text-card-foreground">
+                {doc.titulo}
+              </h2>
+              {selos}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              {identificacao}
+              {identificacao ? <span aria-hidden>·</span> : null}
+              {rodapeMeta}
+            </div>
           </div>
         </div>
-        <div className="hidden shrink-0 lg:block">{acoes}</div>
-        <div className="shrink-0 lg:hidden">
-          <Button
-            size="sm"
-            className="h-8 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
-            onClick={onVisualizar}
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex shrink-0 items-center justify-end gap-1 sm:ml-auto">
+          {botaoFavorito}
+          {menuMais}
+          {botaoBaixar}
+          {botaoVisualizar}
         </div>
       </article>
     );
@@ -1216,17 +1256,7 @@ function CartaoDocumento({
           <Icone className="h-4 w-4 text-brand" />
         </div>
         <div className="flex flex-wrap items-start justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-7 w-7 ${favorito ? "text-gold" : "text-muted-foreground"}`}
-            title={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-            aria-pressed={favorito}
-            onClick={onAlternarFavorito}
-          >
-            <Star className={`h-4 w-4 ${favorito ? "fill-current" : ""}`} />
-          </Button>
+          {botaoFavorito}
           {selos}
         </div>
       </div>
@@ -1255,58 +1285,10 @@ function CartaoDocumento({
 
       <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
         {rodapeMeta}
-        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-1 sm:w-auto">
-          {acesso?.podeAtualizar ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground"
-              title="Editar"
-              aria-label={`Editar ${doc.titulo}`}
-              onClick={onEditar}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
-          {acesso?.podeExcluir ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              title="Remover"
-              aria-label={`Remover ${doc.titulo}`}
-              onClick={onExcluir}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            title="Ver histórico de versões"
-            aria-label={`Histórico de ${doc.titulo}`}
-            onClick={onHistorico}
-          >
-            <History className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            title="Baixar"
-            aria-label={`Baixar ${doc.titulo}`}
-            onClick={onBaixar}
-          >
-            <Download className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="sm"
-            className="h-8 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
-            onClick={onVisualizar}
-          >
-            Visualizar <Eye className="h-3 w-3" />
-          </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          {menuMais}
+          {botaoBaixar}
+          {botaoVisualizar}
         </div>
       </div>
     </article>

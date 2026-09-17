@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Clock, ClipboardList, Mail, ShieldCheck, X } from "lucide-react";
 
+import logoBranca from "@/assets/svb-logo-branca.png";
+
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -246,38 +248,52 @@ function Aprovacoes() {
 
   return (
     <div className="flex h-screen [height:100dvh] flex-col overflow-hidden bg-background">
-      <header className="shrink-0 border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
-        <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 py-5">
-          <div className="font-display text-4xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
-            SVB
-          </div>
-          <div className="font-display text-sm leading-tight text-primary-foreground/70">
+      <header className="relative shrink-0 overflow-hidden border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
+        <div
+          aria-hidden
+          className="absolute inset-0 z-0 opacity-[0.14]"
+          style={{
+            backgroundImage:
+              "radial-gradient(120% 140% at 100% -30%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
+          }}
+        />
+        <div className="relative z-10 mx-auto flex max-w-3xl flex-wrap items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5">
+          <img
+            src={logoBranca}
+            alt="SVB Sun Visor Brasil"
+            className="h-7 w-auto shrink-0 sm:h-8"
+          />
+          <div className="hidden font-display text-sm leading-tight text-primary-foreground/70 sm:block">
             <strong className="block text-base font-semibold text-primary-foreground">
               Gestão do portal
             </strong>
             Usuários, permissões e auditoria
           </div>
-          <Button
-            type="button"
-            className="ml-auto bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
-            onClick={() => setAbaAtiva("auditoria")}
-          >
-            <ClipboardList className="h-4 w-4" /> Ver logs
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-          >
-            <Link to="/portal">
-              <ArrowLeft className="h-4 w-4" /> Portal
-            </Link>
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button
+              type="button"
+              className="bg-gold font-semibold text-gold-foreground hover:bg-gold/90"
+              onClick={() => setAbaAtiva("auditoria")}
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Ver logs</span>
+            </Button>
+            <Button
+              asChild
+              variant="ghost"
+              className="text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            >
+              <Link to="/portal">
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Portal</span>
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-8 px-6 py-8">
+        <div className="mx-auto max-w-3xl space-y-8 px-4 py-6 sm:px-6 sm:py-8">
           <Tabs
             value={abaAtiva}
             onValueChange={(valor) => setAbaAtiva(valor as typeof abaAtiva)}
@@ -388,7 +404,7 @@ function Aprovacoes() {
                       className="h-8 w-full text-xs sm:w-56"
                     />
                   </div>
-                  <div className="mb-3 grid grid-cols-4 gap-2">
+                  <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(["todos", "criado", "atualizado", "excluido"] as const).map((acao) => (
                       <button
                         key={acao}
@@ -444,7 +460,7 @@ function Aprovacoes() {
       </main>
 
       <footer className="shrink-0 border-t border-border bg-secondary/50">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-2.5">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex items-center gap-2.5">
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-brand font-display text-[10px] font-bold tracking-wide text-primary-foreground">
               SVB
@@ -502,18 +518,22 @@ function Secao({
           {itens.map((p) => (
             <li
               key={p.id}
-              className={`flex flex-wrap items-center gap-3 rounded-sm border border-border bg-card p-3 ${
+              className={`flex flex-col gap-3 rounded-sm border border-border bg-card p-3 sm:flex-row sm:items-center ${
                 destaque ? "border-l-[3px] border-l-gold" : ""
               }`}
             >
-              {icone}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{p.display_name || "Sem nome"}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  {p.email} · pedido em {formatarData(p.created_at)}
-                </p>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                {icone}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{p.display_name || "Sem nome"}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {p.email} · pedido em {formatarData(p.created_at)}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-1">{acoes(p)}</div>
+              <div className="flex flex-wrap items-center gap-1.5 sm:shrink-0 sm:justify-end">
+                {acoes(p)}
+              </div>
             </li>
           ))}
         </ul>
