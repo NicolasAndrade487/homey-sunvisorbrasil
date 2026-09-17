@@ -367,13 +367,11 @@ function AuthPage() {
 // Shell atualizado para combinar estruturalmente com a Home
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background">
-      <main className="relative flex flex-1 flex-col items-center justify-center px-4 py-8 sm:py-12">
-        {/* Camadas de Fundo (Cor e Textura) com -z-10 para não bugar no scroll */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-br from-brand-deep via-brand to-brand" />
+    <div className="flex min-h-screen flex-col bg-background">
+      <main className="relative flex flex-1 flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
         <div
           aria-hidden
-          className="absolute inset-0 -z-10 opacity-[0.14]"
+          className="absolute inset-0 z-0 opacity-[0.14]"
           style={{
             backgroundImage:
               "radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
@@ -381,7 +379,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         />
 
         <div className="relative z-10 flex w-full max-w-sm flex-col items-center">
-          <Link to="/" className="mb-4 flex flex-col items-center gap-4 hover:opacity-90 sm:mb-6">
+          <Link to="/" className="mb-6 flex flex-col items-center gap-4 hover:opacity-90">
             <img
               src={logoBranca}
               alt="SVB Sun Visor Brasil"
@@ -389,12 +387,12 @@ function Shell({ children }: { children: React.ReactNode }) {
             />
           </Link>
           
-          <span className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-medium text-primary-foreground/80 sm:mb-8">
+          <span className="mb-8 inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-medium text-primary-foreground/80">
             <ShieldCheck className="h-3 w-3" />
             Acesso restrito · SVB
           </span>
 
-          <div className="w-full rounded-sm border-t-[3px] border-t-gold bg-card p-6 shadow-xl sm:p-7">
+          <div className="w-full rounded-sm border-t-[3px] border-t-gold bg-card p-7 shadow-xl">
             {children}
           </div>
         </div>
