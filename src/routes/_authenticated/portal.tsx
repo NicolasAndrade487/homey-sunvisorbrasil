@@ -506,7 +506,7 @@ function Portal() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/index", replace: true });
+    navigate({ to: "/", replace: true });
   }
 
   if (carregandoAcesso) {
