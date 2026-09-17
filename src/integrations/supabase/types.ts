@@ -14,58 +14,11 @@ export type Database = {
   }
   public: {
     Tables: {
-      documentos_auditoria: {
-        Row: {
-          acao: string
-          criado_em: string
-          detalhes: Json | null
-          documento_id: string | null
-          id: string
-          usuario_id: string | null
-        }
-        Insert: {
-          acao: string
-          criado_em?: string
-          detalhes?: Json | null
-          documento_id?: string | null
-          id?: string
-          usuario_id?: string | null
-        }
-        Update: {
-          acao?: string
-          criado_em?: string
-          detalhes?: Json | null
-          documento_id?: string | null
-          id?: string
-          usuario_id?: string | null
-        }
-        Relationships: []
-      }
-      documentos_favoritos: {
-        Row: {
-          created_at: string
-          documento_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          documento_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          documento_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       documentos: {
         Row: {
           categoria: string
-          codigo_produto: string | null
           created_at: string
           created_by: string | null
-          data_vigencia: string | null
           descricao: string | null
           file_name: string | null
           file_size: number | null
@@ -75,14 +28,11 @@ export type Database = {
           titulo: string
           updated_at: string
           url: string | null
-          versao: string | null
         }
         Insert: {
           categoria?: string
-          codigo_produto?: string | null
           created_at?: string
           created_by?: string | null
-          data_vigencia?: string | null
           descricao?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -92,14 +42,11 @@ export type Database = {
           titulo: string
           updated_at?: string
           url?: string | null
-          versao?: string | null
         }
         Update: {
           categoria?: string
-          codigo_produto?: string | null
           created_at?: string
           created_by?: string | null
-          data_vigencia?: string | null
           descricao?: string | null
           file_name?: string | null
           file_size?: number | null
@@ -109,52 +56,6 @@ export type Database = {
           titulo?: string
           updated_at?: string
           url?: string | null
-          versao?: string | null
-        }
-        Relationships: []
-      }
-      documentos_recentes: {
-        Row: {
-          acessado_em: string
-          documento_id: string
-          user_id: string
-        }
-        Insert: {
-          acessado_em?: string
-          documento_id: string
-          user_id: string
-        }
-        Update: {
-          acessado_em?: string
-          documento_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      documentos_versoes: {
-        Row: {
-          criado_em: string
-          criado_por: string | null
-          dados: Json
-          documento_id: string
-          id: string
-          versao: number
-        }
-        Insert: {
-          criado_em?: string
-          criado_por?: string | null
-          dados: Json
-          documento_id: string
-          id?: string
-          versao: number
-        }
-        Update: {
-          criado_em?: string
-          criado_por?: string | null
-          dados?: Json
-          documento_id?: string
-          id?: string
-          versao?: number
         }
         Relationships: []
       }
@@ -169,11 +70,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
-          pode_atualizar: boolean
-          pode_excluir: boolean
-          pode_ler: boolean
           status: string
-          tipo_usuario: string
         }
         Insert: {
           aprovado?: boolean
@@ -185,11 +82,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
-          pode_atualizar?: boolean
-          pode_excluir?: boolean
-          pode_ler?: boolean
           status?: string
-          tipo_usuario?: string
         }
         Update: {
           aprovado?: boolean
@@ -201,11 +94,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
-          pode_atualizar?: boolean
-          pode_excluir?: boolean
-          pode_ler?: boolean
           status?: string
-          tipo_usuario?: string
         }
         Relationships: []
       }
@@ -243,20 +132,6 @@ export type Database = {
         Returns: boolean
       }
       is_aprovado: { Args: { _user_id: string }; Returns: boolean }
-      definir_permissoes_usuario: {
-        Args: {
-          _pode_atualizar: boolean
-          _pode_excluir: boolean
-          _pode_ler: boolean
-          _tipo_usuario: string
-          _usuario_id: string
-        }
-        Returns: undefined
-      }
-      restaurar_versao_documento: {
-        Args: { _versao_id: string }
-        Returns: undefined
-      }
     }
     Enums: {
       app_role: "admin" | "membro"
