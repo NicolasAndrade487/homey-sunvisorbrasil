@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { FileText, Lock, Mail, Search, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Lock, Mail, Search, ShieldCheck, ArrowRight, ChevronRight } from "lucide-react";
 
 import logoBranca from "@/assets/svb-logo-branca.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,26 +33,66 @@ const RECURSOS = [
   {
     icon: Search,
     titulo: "Busca instantânea",
-    texto: "Encontre qualquer documento pelo título, código do produto ou categoria em segundos.",
+    texto: "Encontre qualquer documento pelo título, código do produto ou categoria em segundos, sem perder tempo.",
   },
   {
     icon: FileText,
-    titulo: "Cadastro compartilhado",
-    texto: "Toda a empresa vê o mesmo catálogo, sempre atualizado e com histórico de versões.",
+    titulo: "Catálogo unificado",
+    texto: "Toda a empresa acessa a mesma base. Documentos sempre na última versão e com histórico preservado.",
   },
   {
     icon: Lock,
-    titulo: "Acesso restrito",
-    texto: "Nada fica público: só quem tem login da empresa consegue abrir os arquivos.",
+    titulo: "Acesso corporativo",
+    texto: "Ambiente restrito. Apenas colaboradores autenticados com e-mail corporativo podem visualizar e baixar.",
   },
 ] as const;
 
+// --- Componente Auxiliar para Efeito de Scroll ---
+function FadeIn({
+  children,
+  delay = 0,
+  className = "",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1, rootMargin: "50px" }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`transition-all duration-700 ease-out ${
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+      } ${className}`}
+      style={{ transitionDelay: `${delay}ms` }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Home() {
   const [signedIn, setSignedIn] = useState(false);
-  /* Evita o CTA "piscar" com o texto errado por uma fração de segundo enquanto a
-     sessão é verificada — mostra um esqueleto até termos a resposta de verdade. */
   const [verificandoSessao, setVerificandoSessao] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
 
+  // Verifica a sessão atual
   useEffect(() => {
     let ativo = true;
     supabase.auth.getSession().then(({ data }) => {
@@ -65,108 +105,158 @@ function Home() {
     };
   }, []);
 
+  // Monitora o scroll para alterar o header se necessário (efeito sombra)
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand text-primary-foreground">
+    <div className="flex min-h-screen flex-col bg-background font-sans selection:bg-brand/20 selection:text-brand-deep">
+      {/* HEADER FIXO - Glassmorphism */}
+      <header
+        className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-brand-deep/80 shadow-md backdrop-blur-md" : "bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <img src={logoBranca} alt="SVB" className="h-7 w-auto sm:h-8" />
+            <span className="hidden h-5 w-px bg-white/20 sm:block" />
+            <span className="hidden text-sm font-medium tracking-wide text-white/90 sm:block">
+              Portal de Documentos
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {!verificandoSessao && signedIn && (
+              <Button asChild size="sm" variant="ghost" className="text-white hover:bg-white/10">
+                <Link to="/portal">Meu Painel</Link>
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* HERO SECTION */}
+      <section className="relative flex min-h-[90vh] flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand text-primary-foreground pt-16">
+        {/* Textura / Pattern de Fundo */}
         <div
           aria-hidden
-          className="absolute inset-0 z-0 opacity-[0.14]"
+          className="absolute inset-0 z-0 opacity-[0.12]"
           style={{
             backgroundImage:
-              "radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
+              "radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.6), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.5) 0px, rgba(255,255,255,0.5) 1px, transparent 1px, transparent 32px)",
           }}
         />
-        <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-16 text-center sm:gap-8 sm:px-6 sm:py-20 lg:py-28">
-          <img
-            src={logoBranca}
-            alt="SVB Sun Visor Brasil"
-            className="h-12 w-auto sm:h-14 lg:h-16"
-          />
+        
+        {/* Luz de destaque suave (Glow radial) */}
+        <div className="absolute left-1/2 top-1/2 -z-0 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10 blur-[100px]" />
 
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/25 bg-primary-foreground/10 px-3 py-1 text-xs font-medium text-primary-foreground/80">
-            <ShieldCheck className="h-3 w-3" />
-            Uso interno · Sun Visor Brasil
+        <FadeIn className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-4 py-16 text-center sm:gap-8 sm:px-6">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-xs font-medium uppercase tracking-wider text-white/90 backdrop-blur-sm shadow-sm">
+            <ShieldCheck className="h-3.5 w-3.5 text-gold" />
+            Acesso Restrito
           </span>
 
-          <div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-              Portal de Manuais e Documentos
+          <div className="space-y-4">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl lg:leading-[1.1]">
+              O acervo técnico da <span className="text-gold">SVB</span> <br className="hidden sm:block" />
+              na palma da mão.
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm text-primary-foreground/70 sm:text-base">
-              Consulta rápida de manuais de instalação, fichas técnicas, catálogos, certificados e
-              termos de garantia. Acesso exclusivo para a equipe.
+            <p className="mx-auto max-w-2xl text-base text-primary-foreground/80 sm:text-lg">
+              Manuais de instalação, fichas técnicas, certificados e garantias centralizados. A informação certa, no momento que você precisa.
             </p>
           </div>
 
-          <div className="flex w-full flex-col items-center gap-3 sm:w-auto">
+          <div className="flex w-full flex-col items-center gap-4 sm:w-auto">
             {verificandoSessao ? (
               <div
                 aria-hidden
-                className="h-11 w-full max-w-xs animate-pulse rounded-sm bg-primary-foreground/15 sm:w-48"
+                className="h-12 w-full max-w-[280px] animate-pulse rounded-md bg-white/10 sm:w-64"
               />
             ) : (
               <Button
                 asChild
                 size="lg"
-                className="w-full bg-gold font-semibold text-gold-foreground hover:bg-gold/90 sm:w-auto"
+                className="group h-12 w-full bg-gold px-8 font-semibold text-gold-foreground shadow-lg transition-all hover:scale-105 hover:bg-gold/90 hover:shadow-gold/25 sm:w-auto"
               >
                 <Link to={signedIn ? "/portal" : "/auth"}>
-                  {signedIn ? "Abrir o portal" : "Entrar com email da empresa"}
+                  {signedIn ? "Acessar o portal" : "Entrar corporativo"}
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
             )}
             <a
               href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Acesso ao Portal de Documentos SVB")}`}
-              className="inline-flex items-center gap-1.5 text-xs text-primary-foreground/60 transition-colors hover:text-primary-foreground"
+              className="group inline-flex items-center gap-1.5 text-sm font-medium text-white/60 transition-colors hover:text-white"
             >
-              <Mail className="h-3 w-3" />
-              Ainda não tem acesso? Fale com o responsável do portal
+              <Mail className="h-3.5 w-3.5" />
+              Não possui acesso? Solicite agora
+              <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-all group-hover:translate-x-0.5 group-hover:opacity-100" />
             </a>
           </div>
+        </FadeIn>
+      </section>
+
+      {/* SEÇÃO DE RECURSOS (CARDS) */}
+      <section className="relative mx-auto w-full max-w-6xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+        <FadeIn>
+          <div className="mb-12 text-center">
+            <h2 className="font-display text-2xl font-bold tracking-tight text-brand-deep sm:text-3xl">
+              Feito para otimizar o dia a dia
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Esqueça buscar arquivos em pastas antigas ou grupos de mensagens.
+            </p>
+          </div>
+        </FadeIn>
+
+        <div className="grid gap-6 sm:grid-cols-3 lg:gap-8">
+          {RECURSOS.map((item, i) => (
+            <FadeIn key={item.titulo} delay={i * 150}>
+              <div className="group relative h-full overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-brand/30 hover:shadow-xl">
+                {/* Efeito Glow no fundo do card (visível no hover) */}
+                <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-brand/5 blur-3xl transition-colors duration-500 group-hover:bg-gold/20" />
+                
+                <div className="relative z-10 mb-6 flex h-14 w-14 items-center justify-center rounded-xl bg-secondary text-brand transition-transform duration-300 group-hover:scale-110 group-hover:bg-brand group-hover:text-primary-foreground shadow-sm">
+                  <item.icon className="h-6 w-6" />
+                </div>
+                
+                <h3 className="relative z-10 font-display text-xl font-semibold text-card-foreground">
+                  {item.titulo}
+                </h3>
+                <p className="relative z-10 mt-3 leading-relaxed text-muted-foreground">
+                  {item.texto}
+                </p>
+              </div>
+            </FadeIn>
+          ))}
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-4xl flex-1 gap-4 px-4 py-12 sm:grid-cols-3 sm:px-6 sm:py-16">
-        {RECURSOS.map((item) => (
-          <div
-            key={item.titulo}
-            className="rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-5 transition-colors hover:border-l-gold"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-secondary">
-              <item.icon className="h-4 w-4 text-brand" />
-            </div>
-            <h2 className="mt-3 font-display text-base font-medium text-card-foreground">
-              {item.titulo}
-            </h2>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.texto}</p>
-          </div>
-        ))}
-      </section>
-
-      <footer className="shrink-0 border-t border-border bg-secondary/50">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-brand font-display text-[10px] font-bold tracking-wide text-primary-foreground">
+      {/* RODAPÉ */}
+      <footer className="mt-auto border-t border-border bg-card">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <span className="flex h-7 w-7 items-center justify-center rounded bg-brand font-display text-[10px] font-bold tracking-wider text-primary-foreground shadow-sm">
               SVB
             </span>
-            <span className="text-xs text-muted-foreground">
-              Sun Visor Brasil <span className="text-border">·</span> uso interno
+            <span className="text-sm font-medium text-muted-foreground">
+              Sun Visor Brasil <span className="mx-1 text-border">|</span> Uso Interno
             </span>
           </div>
 
           <a
             href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Suporte — Portal de Documentos SVB")}`}
-            title="Informe seu nome, o documento e o que aconteceu"
-            className="group flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 transition-colors hover:border-gold"
+            className="group flex items-center gap-2 rounded-full border border-border bg-secondary/50 px-4 py-2 transition-all hover:border-gold hover:bg-gold/5"
           >
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors group-hover:bg-gold/20">
-              <Mail className="h-3 w-3" />
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand/10 text-brand transition-colors group-hover:bg-gold/20">
+              <Mail className="h-3.5 w-3.5" />
             </span>
-            <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-brand">
-              Precisa de ajuda?
-            </span>
-            <span className="hidden text-xs font-semibold text-brand sm:inline">
-              {EMAIL_SUPORTE}
+            <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-brand-deep">
+              Suporte Técnico
             </span>
           </a>
         </div>
