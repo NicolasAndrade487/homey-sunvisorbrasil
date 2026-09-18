@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 
+import logoBranca from "@/assets/svb-logo-branca.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,14 +56,24 @@ function RedefinirSenha() {
   }
 
   return (
-    <div className="flex min-h-screen [min-height:100dvh] flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
-      <div className="mb-8 font-display text-5xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
-        SVB
-      </div>
+    <div className="relative flex min-h-screen [min-height:100dvh] flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
+      <div
+        aria-hidden
+        className="absolute inset-0 z-0 opacity-[0.14]"
+        style={{
+          backgroundImage:
+            "radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,0.55), transparent 55%), repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 1px, transparent 1px, transparent 26px)",
+        }}
+      />
       
-      <div className="w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
-        <KeyRound className="mx-auto h-8 w-8 text-brand" />
-        <h1 className="mt-4 font-display text-xl font-semibold text-card-foreground">
+      <img 
+        src={logoBranca} 
+        alt="SVB Sun Visor Brasil" 
+        className="relative z-10 mb-8 h-12 w-auto sm:h-14" 
+      />
+
+      <div className="relative z-10 w-full max-w-sm rounded-sm border-t-[3px] border-t-gold bg-card p-7 text-center shadow-lg">
+        <h1 className="font-display text-xl font-semibold text-card-foreground">
           Nova senha
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -109,7 +120,9 @@ function RedefinirSenha() {
         </a>
       </div>
       
-      <p className="mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
+      <p className="relative z-10 mt-6 text-xs text-primary-foreground/50">
+        Acesso restrito · SVB
+      </p>
     </div>
   );
 }
