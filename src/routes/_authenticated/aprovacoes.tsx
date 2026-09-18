@@ -524,16 +524,17 @@ function Secao({
                 destaque ? "border-l-[3px] border-l-gold" : ""
               }`}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
                 {icone}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 space-y-0.5">
                   <p className="truncate text-sm font-semibold" title={p.display_name || "Sem nome"}>
                     {p.display_name || "Sem nome"}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground" title={`${p.email} · pedido em ${formatarData(p.created_at)}`}>
-                    <span className="font-medium text-foreground/80">{p.email}</span> 
-                    {/* whitespace-nowrap impede que a data/ano quebre a linha */}
-                    <span className="whitespace-nowrap"> · pedido em {formatarData(p.created_at)}</span>
+                  <p className="truncate text-xs font-medium text-foreground/80" title={p.email || ""}>
+                    {p.email}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground whitespace-nowrap">
+                    pedido em {formatarData(p.created_at)}
                   </p>
                 </div>
               </div>
