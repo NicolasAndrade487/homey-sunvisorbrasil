@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { ChecklistSenha } from "@/components/checklist-senha";
 import { MIN_SENHA, primeiroErroSenha } from "@/lib/senha";
+
+const EMAIL_SUPORTE = "suporte@sunvisorbrasil.com.br";
 
 export const Route = createFileRoute("/redefinir-senha")({
   ssr: false,
@@ -52,7 +55,7 @@ function RedefinirSenha() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
+    <div className="flex min-h-screen [min-height:100dvh] flex-col items-center justify-center bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
       <div className="mb-8 font-display text-5xl font-black tracking-[0.18em] text-primary-foreground [text-shadow:2px_2px_0_rgba(255,255,255,0.15),-1px_1px_0_rgba(255,255,255,0.2)]">
         SVB
       </div>
@@ -61,6 +64,7 @@ function RedefinirSenha() {
         <p className="mt-2 text-sm text-muted-foreground">
           Escolha uma nova senha para acessar o portal.
         </p>
+        
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="nova-senha">Nova senha</Label>
@@ -87,10 +91,20 @@ function RedefinirSenha() {
               autoComplete="new-password"
             />
           </div>
-          <Button type="submit" className="w-full font-semibold" disabled={enviando}>
+          <Button type="submit" className="mt-2 w-full font-semibold" disabled={enviando}>
             {enviando ? "Atualizando..." : "Atualizar senha"}
           </Button>
         </form>
+
+        <div className="mt-6 flex justify-center border-t border-border pt-6">
+          <a
+            href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Suporte — Redefinição de senha")}`}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-brand"
+          >
+            <Mail className="h-3.5 w-3.5" />
+            Precisa de ajuda?
+          </a>
+        </div>
       </div>
       <p className="mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
     </div>
