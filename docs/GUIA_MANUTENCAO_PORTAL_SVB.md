@@ -113,6 +113,11 @@ Se a tela estiver vazia, verifique se essa migracao foi executada e se o usuario
 -arquivo:`src/routes/_authenticated/portal.tsx`
 -Linha:1247.
 
+## Troca do direcionamento do sair no portal
+
+Alterar em `src/routes/_authenticated/route.tsx` /auth para / e em `src/routes/_authenticated/portal.tsx`
+trocar em sair /auth para /
+
 ## Adicionar novas categorias
 
 -adicionar em portal o icone:`src/routes/_authenticated/portal.tsx`.
