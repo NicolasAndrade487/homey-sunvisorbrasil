@@ -432,21 +432,23 @@ function Aprovacoes() {
                       {logsVisiveis.map((log) => {
                         const pessoa = pessoas.find((item) => item.id === log.usuario_id);
                         return (
-                          <div key={log.id} className="grid gap-2 border-b border-border p-3 last:border-b-0 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold">{log.detalhes?.titulo || "Documento sem título"}</p>
-                              <p className="truncate text-xs text-muted-foreground">
+                          <div key={log.id} className="grid gap-2 border-b border-border p-3 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center">
+                            <div className="min-w-0 space-y-1">
+                              <p className="text-sm font-semibold break-words">{log.detalhes?.titulo || "Documento sem título"}</p>
+                              <p className="text-xs text-muted-foreground break-all">
                                 {pessoa?.display_name || "Usuário não identificado"} · {pessoa?.email || log.usuario_id || "sem identificação"}
                               </p>
+                              <div className="flex flex-wrap items-center gap-2 pt-1">
+                                <span className={`w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                                  log.acao === "excluido" ? "bg-destructive/10 text-destructive" : log.acao === "criado" ? "bg-emerald-500/10 text-emerald-700" : "bg-secondary text-brand"
+                                }`}>
+                                  {log.acao}
+                                </span>
+                                <time className="text-[11px] text-muted-foreground">
+                                  {new Date(log.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                                </time>
+                              </div>
                             </div>
-                            <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${
-                              log.acao === "excluido" ? "bg-destructive/10 text-destructive" : log.acao === "criado" ? "bg-emerald-500/10 text-emerald-700" : "bg-secondary text-brand"
-                            }`}>
-                              {log.acao}
-                            </span>
-                            <time className="text-xs text-muted-foreground sm:text-right">
-                              {new Date(log.criado_em).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
-                            </time>
                           </div>
                         );
                       })}
@@ -525,8 +527,8 @@ function Secao({
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 {icone}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{p.display_name || "Sem nome"}</p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="text-sm font-semibold break-words">{p.display_name || "Sem nome"}</p>
+                  <p className="text-xs text-muted-foreground break-all sm:break-words">
                     {p.email} · pedido em {formatarData(p.created_at)}
                   </p>
                 </div>
