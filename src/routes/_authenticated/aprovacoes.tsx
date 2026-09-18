@@ -527,9 +527,13 @@ function Secao({
               <div className="flex min-w-0 flex-1 items-center gap-3">
                 {icone}
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold break-words">{p.display_name || "Sem nome"}</p>
-                  <p className="text-xs text-muted-foreground break-all sm:break-words">
-                    {p.email} · pedido em {formatarData(p.created_at)}
+                  <p className="truncate text-sm font-semibold" title={p.display_name || "Sem nome"}>
+                    {p.display_name || "Sem nome"}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground" title={`${p.email} · pedido em ${formatarData(p.created_at)}`}>
+                    <span className="font-medium text-foreground/80">{p.email}</span> 
+                    {/* whitespace-nowrap impede que a data/ano quebre a linha */}
+                    <span className="whitespace-nowrap"> · pedido em {formatarData(p.created_at)}</span>
                   </p>
                 </div>
               </div>
