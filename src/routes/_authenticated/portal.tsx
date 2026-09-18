@@ -181,6 +181,7 @@ function Portal() {
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
+    staleTime: 1000 * 60 * 15, // 15 minutos sem refetch automático (evita sobrecarga ao focar a janela)
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
@@ -228,10 +229,12 @@ function Portal() {
   });
 
   const aprovado = Boolean(acesso?.aprovado);
+  const usuarioId = acesso?.id;
 
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ["documentos"],
     enabled: aprovado && Boolean(acesso?.podeLer),
+    staleTime: 1000 * 60 * 5, // Mantém cache por 5 min para evitar DB hits desnecessários
     queryFn: async (): Promise<Documento[]> => {
       const { data, error } = await supabase
         .from("documentos")
@@ -242,14 +245,29 @@ function Portal() {
     },
   });
 
-  const usuarioId = acesso?.id;
   const { data: favoritos = [] } = useQuery({
     queryKey: ["documentos-favoritos", usuarioId],
     enabled: Boolean(usuarioId && acesso?.podeLer),
+    staleTime: Infinity,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("documentos_favoritos")
         .select("documento_id");
+      if (error) throw error;
+      return data.map((item) => item.documento_id);
+    },
+  });
+
+  const { data: documentosAcessados = [] } = useQuery({
+    queryKey: ["documentos-recentes", usuarioId],
+    enabled: Boolean(usuarioId && acesso?.podeLer),
+    staleTime: Infinity,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("documentos_recentes")
+        .select("documento_id")
+        .order("acessado_em", { ascending: false })
+        .limit(20);
       if (error) throw error;
       return data.map((item) => item.documento_id);
     },
@@ -279,20 +297,6 @@ function Portal() {
         : documentos.filter((documento) => documento.categoria === categoriaAtiva),
     [documentos, categoriaAtiva],
   );
-
-  const { data: documentosAcessados = [] } = useQuery({
-    queryKey: ["documentos-recentes", usuarioId],
-    enabled: Boolean(usuarioId && acesso?.podeLer),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("documentos_recentes")
-        .select("documento_id")
-        .order("acessado_em", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data.map((item) => item.documento_id);
-    },
-  });
 
   const contagensFiltros = useMemo(
     () => ({
@@ -343,30 +347,37 @@ function Portal() {
   const registrarAcesso = useCallback(
     (documentoId: string) => {
       if (!usuarioId) return;
+
+      const chave = ["documentos-recentes", usuarioId] as const;
+      queryClient.setQueryData<string[]>(chave, (atuais = []) => {
+        const semOAtual = atuais.filter((id) => id !== documentoId);
+        return [documentoId, ...semOAtual].slice(0, 20);
+      });
+
       void supabase
         .from("documentos_recentes")
         .upsert(
           { user_id: usuarioId, documento_id: documentoId, acessado_em: new Date().toISOString() },
           { onConflict: "user_id,documento_id" },
         )
-        .then(({ error }) => {
-          if (!error) {
-            void queryClient.invalidateQueries({ queryKey: ["documentos-recentes", usuarioId] });
-          }
-        });
+        .then();
     },
     [usuarioId, queryClient],
   );
 
   async function alternarFavorito(documentoId: string) {
     if (!usuarioId) return;
-    const marcado = favoritos.includes(documentoId);
     const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
-    const favoritosAnteriores = [...favoritos];
-    const favoritosAtualizados = marcado
-      ? favoritos.filter((id) => id !== documentoId)
-      : [...favoritos, documentoId];
+    
+    await queryClient.cancelQueries({ queryKey: chaveFavoritos });
 
+    const favoritosAnteriores = queryClient.getQueryData<string[]>(chaveFavoritos) || [];
+    const marcado = favoritosAnteriores.includes(documentoId);
+    
+    const favoritosAtualizados = marcado
+      ? favoritosAnteriores.filter((id) => id !== documentoId)
+      : [...favoritosAnteriores, documentoId];
+      
     queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAtualizados);
 
     const resultado = marcado
@@ -378,12 +389,11 @@ function Portal() {
       : await supabase
           .from("documentos_favoritos")
           .insert({ user_id: usuarioId, documento_id: documentoId });
+          
     if (resultado.error) {
       queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAnteriores);
       toast.error(`Não foi possível atualizar o favorito: ${resultado.error.message}`);
-      return;
     }
-    await queryClient.invalidateQueries({ queryKey: chaveFavoritos });
   }
 
   async function obterUrlDocumento(doc: Documento) {
@@ -416,27 +426,23 @@ function Portal() {
   }
 
   async function baixarDocumento(doc: Documento) {
-    const url = await obterUrlDocumento(doc).catch((err: unknown) => {
-      toast.error(err instanceof Error ? err.message : "Não foi possível abrir o arquivo.");
-      return undefined;
-    });
-    if (url === undefined) return;
-    if (!url) {
-      toast.error("Este documento não tem arquivo nem link cadastrado. Edite-o para corrigir.");
-      return;
-    }
-
-    const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
-
-    /*
-     * O atributo `download` do <a> só é respeitado pelo navegador quando o link é
-     * da mesma origem, ou uma blob: URL. A URL assinada do Storage é de outro domínio,
-     * então sem isso o navegador abre o PDF em vez de salvar. Buscamos o arquivo como
-     * blob e criamos uma URL local — só aí o "Salvar como" acontece de fato.
-     */
+    const loadingToast = toast.loading("Preparando download...");
+    
     try {
+      const url = await obterUrlDocumento(doc);
+      if (!url) {
+        toast.dismiss(loadingToast);
+        toast.error("Este documento não tem arquivo nem link cadastrado. Edite-o para corrigir.");
+        return;
+      }
+      
+      registrarAcesso(doc.id);
+
+      const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
+
       const resposta = await fetch(url);
       if (!resposta.ok) throw new Error("Falha ao buscar o arquivo.");
+      
       const blob = await resposta.blob();
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -446,42 +452,35 @@ function Portal() {
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      toast.dismiss(loadingToast);
     } catch {
-      /*
-       * Provavelmente um link externo (tipo "link") cujo servidor não libera CORS
-       * para leitura via fetch. Nesse caso não há como forçar o download a partir
-       * de outra origem — abrimos o PDF numa aba para a pessoa salvar por lá.
-       */
+      toast.dismiss(loadingToast);
       toast.error("Esse link não permite baixar direto por aqui. Abrindo o PDF para você salvar pela aba do navegador.");
-      window.open(url, "_blank", "noopener,noreferrer");
+      window.open(doc.url || "", "_blank", "noopener,noreferrer");
     }
   }
 
   async function excluir(doc: Documento) {
-    if (doc.storage_path) {
-      await supabase.storage.from("documentos").remove([doc.storage_path]);
-    }
-    const { error } = await supabase.from("documentos").delete().eq("id", doc.id);
-    if (error) {
+    const documentosAnteriores = queryClient.getQueryData<Documento[]>(["documentos"]) || [];
+    queryClient.setQueryData<Documento[]>(["documentos"], (velhos = []) => velhos.filter(d => d.id !== doc.id));
+
+    try {
+      if (doc.storage_path) {
+        await supabase.storage.from("documentos").remove([doc.storage_path]);
+      }
+      const { error } = await supabase.from("documentos").delete().eq("id", doc.id);
+      if (error) throw error;
+      
+      if (usuarioId) {
+        queryClient.setQueryData<string[]>(["documentos-favoritos", usuarioId], (atuais = []) => atuais.filter((id) => id !== doc.id));
+        queryClient.setQueryData<string[]>(["documentos-recentes", usuarioId], (atuais = []) => atuais.filter((id) => id !== doc.id));
+      }
+      toast.success("Documento removido.");
+    } catch {
       toast.error("Não foi possível remover o documento.");
-      return;
+      queryClient.setQueryData<Documento[]>(["documentos"], documentosAnteriores);
+      queryClient.invalidateQueries({ queryKey: ["documentos"] });
     }
-    if (usuarioId) {
-      const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
-      const chaveAcessados = ["documentos-recentes", usuarioId] as const;
-      queryClient.setQueryData<string[]>(chaveFavoritos, (atuais = []) =>
-        atuais.filter((id) => id !== doc.id),
-      );
-      queryClient.setQueryData<string[]>(chaveAcessados, (atuais = []) =>
-        atuais.filter((id) => id !== doc.id),
-      );
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: chaveFavoritos }),
-        queryClient.invalidateQueries({ queryKey: chaveAcessados }),
-      ]);
-    }
-    toast.success("Documento removido.");
-    queryClient.invalidateQueries({ queryKey: ["documentos"] });
   }
 
   async function restaurarVersao() {
@@ -578,7 +577,6 @@ function Portal() {
   }
 
   return (
-    /* Casca de altura fixa: só a área de cards rola. Header, filtros e rodapé ficam sempre visíveis. */
     <div className="flex h-screen [height:100dvh] flex-col overflow-hidden bg-background">
       <header className="relative shrink-0 overflow-hidden border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div
@@ -674,7 +672,6 @@ function Portal() {
         </div>
       </header>
 
-      {/* Bloco de filtros recolhível: some inteiro para dar a tela toda aos cards. */}
       {filtrosVisiveis ? (
         <>
           <nav className="shrink-0 border-b border-border bg-card" aria-label="Categorias">
@@ -737,7 +734,6 @@ function Portal() {
         </>
       ) : null}
 
-      {/* Barra de ferramentas: sempre visível, é o controle da lista logo abaixo. */}
       <div className="shrink-0 border-b border-border bg-background">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-6">
           <div className="flex min-w-0 items-baseline gap-2">
@@ -801,7 +797,6 @@ function Portal() {
         </div>
       </div>
 
-      {/* Único elemento rolável da página. */}
       <main ref={areaCards} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           {isLoading ? (
@@ -1132,9 +1127,6 @@ function CartaoDocumento({
     </Button>
   );
 
-  /* Editar, histórico e excluir moram no menu "···": deixa o card limpo e — diferente da
-     versão anterior, que escondia essas ações abaixo de "lg" na visão em lista — continua
-     acessível em qualquer largura de tela. */
   const menuMais = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -1211,12 +1203,6 @@ function CartaoDocumento({
     </span>
   );
 
-  /*
-   * Lista: pilha vertical no mobile (identificação em cima, ações embaixo alinhadas à
-   * direita) e vira uma linha só a partir de sm. As ações ficam sempre visíveis — a versão
-   * anterior as escondia por completo abaixo de "lg", o que travava edição/exclusão no
-   * celular e em tablets.
-   */
   if (emLista) {
     return (
       <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-3 transition-colors hover:border-l-gold sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
@@ -1248,7 +1234,6 @@ function CartaoDocumento({
     );
   }
 
-  /* Grade: card completo, com descrição. */
   return (
     <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-4 transition-all hover:border-l-gold hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
