@@ -440,23 +440,20 @@ function Portal() {
 
       const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
 
-      const resposta = await fetch(url);
-      if (!resposta.ok) throw new Error("Falha ao buscar o arquivo.");
-      
-      const blob = await resposta.blob();
-      const blobUrl = URL.createObjectURL(blob);
+      // Criação direta do link de download ignorando o fetch restrito do navegador
       const link = document.createElement("a");
-      link.href = blobUrl;
+      link.href = url;
       link.download = nomeArquivo;
+      link.target = "_blank"; // Garante fallback seguro se o navegador bloquear o download direto
       document.body.appendChild(link);
       link.click();
       link.remove();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+
       toast.dismiss(loadingToast);
-    } catch {
+      toast.success("Download iniciado.");
+    } catch (err) {
       toast.dismiss(loadingToast);
-      toast.error("Esse link não permite baixar direto por aqui. Abrindo o PDF para você salvar pela aba do navegador.");
-      window.open(doc.url || "", "_blank", "noopener,noreferrer");
+      toast.error(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
     }
   }
 
