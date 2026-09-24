@@ -425,35 +425,44 @@ function Portal() {
     }
   }
 
-  async function baixarDocumento(doc: Documento) {
-    const loadingToast = toast.loading("Preparando download...");
+ async function baixarDocumento(doc: Documento) {
+    const loadingToast = toast.loading("Baixando arquivo...");
     
     try {
       const url = await obterUrlDocumento(doc);
       if (!url) {
         toast.dismiss(loadingToast);
-        toast.error("Este documento não tem arquivo nem link cadastrado. Edite-o para corrigir.");
+        toast.error("Este documento não tem arquivo nem link cadastrado.");
         return;
       }
       
       registrarAcesso(doc.id);
-
       const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
 
-      // Criação direta do link de download ignorando o fetch restrito do navegador
+      // Força o download via fetch do blob gerado pela Signed URL
+      const resposta = await fetch(url);
+      if (!resposta.ok) throw new Error("Falha ao baixar o arquivo.");
+      
+      const blob = await resposta.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.download = nomeArquivo;
-      link.target = "_blank"; // Garante fallback seguro se o navegador bloquear o download direto
       document.body.appendChild(link);
       link.click();
       link.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
 
       toast.dismiss(loadingToast);
-      toast.success("Download iniciado.");
-    } catch (err) {
+      toast.success("Download concluído.");
+    } catch {
       toast.dismiss(loadingToast);
-      toast.error(err instanceof Error ? err.message : "Não foi possível baixar o arquivo.");
+      // Fallback caso o navegador bloqueie o blob por CORS
+      if (doc.url || doc.storage_path) {
+        window.open(doc.url || (await obterUrlDocumento(doc)) || "", "_blank");
+      } else {
+        toast.error("Não foi possível baixar o arquivo.");
+      }
     }
   }
 
