@@ -907,136 +907,372 @@ function Portal() {
         </div>
       </footer>
 
-      <FormularioDocumento
-        aberto={modalAberto}
-        documento={editando}
-        onFechar={() => setModalAberto(false)}
-        onSalvo={() => {
-          setModalAberto(false);
-          queryClient.invalidateQueries({ queryKey: ["documentos"] });
-        }}
-      />
+      function FormularioDocumento({
+  aberto,
+  documento,
+  onFechar,
+  onSalvo,
+}: {
+  aberto: boolean;
+  documento: Documento | null;
+  onFechar: () => void;
+  onSalvo: () => void;
+}) {
+  const [modo, setModo] = useState<"upload" | "link">("upload");
+  const [titulo, setTitulo] = useState("");
+  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
+  const [codigoProduto, setCodigoProduto] = useState("");
+  const [versao, setVersao] = useState("");
+  const [dataVigencia, setDataVigencia] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [url, setUrl] = useState("");
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
+  const [salvando, setSalvando] = useState(false);
+  const [enviandoArquivo, setEnviandoArquivo] = useState(false);
+  const inputArquivo = useRef<HTMLInputElement>(null);
+  const idCarregado = useRef<string | null>(null);
 
-      <ImportacaoLote
-        aberto={importacaoAberta}
-        onFechar={() => setImportacaoAberta(false)}
-        onSalvo={() => {
-          setImportacaoAberta(false);
-          queryClient.invalidateQueries({ queryKey: ["documentos"] });
-        }}
-      />
+  useEffect(() => {
+    if (!aberto) {
+      idCarregado.current = null;
+      return;
+    }
 
-      <Dialog
-        open={Boolean(documentoPreview)}
-        onOpenChange={(aberto) => {
-          if (!aberto) {
-            setDocumentoPreview(null);
-            setUrlPreview(null);
+    const chave = documento?.id ?? "novo";
+    if (idCarregado.current === chave) return;
+
+    idCarregado.current = chave;
+    setTitulo(documento?.titulo ?? "");
+    setCategoria(documento?.categoria ?? CATEGORIAS[0]);
+    setCodigoProduto(documento?.codigo_produto ?? "");
+    
+    // Automatização inteligente da Revisão:
+    // Se for um documento novo, sugere "01" (ou Rev. 01). 
+    // Se for edição e já tiver versão, você pode incrementar ou deixar a anterior.
+    if (documento?.versao) {
+      setVersao(documento.versao);
+    } else if (!documento) {
+      setVersao("01"); // Começa limpo e automático como 01 para novos documentos
+    } else {
+      setVersao("");
+    }
+
+    setDataVigencia(documento?.data_vigencia ?? "");
+    setDescricao(documento?.descricao ?? "");
+    setUrl(documento?.url ?? "");
+    setArquivo(null);
+    setErroArquivo(null);
+    setModo(documento?.tipo === "link" ? "link" : "upload");
+  }, [aberto, documento]);
+
+  function escolherArquivo(selecionado: File | null) {
+    if (!selecionado) {
+      setArquivo(null);
+      setErroArquivo(null);
+      return;
+    }
+    const ehPdf =
+      selecionado.type === "application/pdf" || /\.pdf$/i.test(selecionado.name);
+    if (!ehPdf) {
+      setErroArquivo("Envie um arquivo em PDF.");
+      setArquivo(null);
+      return;
+    }
+    if (selecionado.size > LIMITE_BYTES) {
+      setErroArquivo(
+        `Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB. Reduza o PDF ou cadastre pelo link.`,
+      );
+      setArquivo(null);
+      return;
+    }
+    setErroArquivo(null);
+    setArquivo(selecionado);
+  }
+
+  async function salvar(e: React.FormEvent) {
+    e.preventDefault();
+    if (!titulo.trim()) {
+      toast.error("Informe o título do documento.");
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      const { data: sessao } = await supabase.auth.getUser();
+      const userId = sessao.user?.id;
+      if (!userId) throw new Error("Sessão expirada. Entre novamente.");
+
+      // Padroniza a versão automaticamente se o usuário digitar apenas números (ex: "1" vira "01" ou "Rev. 01")
+      let versaoFormatada = versao.trim();
+      if (versaoFormatada && !/rev/i.test(versaoFormatada)) {
+        versaoFormatada = `0${versaoFormatada}`.slice(-2); // Garante 2 dígitos (ex: 1 -> 01)
+      }
+
+      const campos: Partial<Documento> = {
+        titulo: titulo.trim(),
+        categoria,
+        codigo_produto: codigoProduto.trim() || null,
+        versao: versaoFormatada || "01",
+        data_vigencia: dataVigencia || null,
+        descricao: descricao.trim() || null,
+      };
+
+      let caminhoAntigo: string | null = null;
+
+      if (modo === "link") {
+        const enderecoLimpo = url.trim();
+        let endereco: URL;
+        try {
+          endereco = new URL(enderecoLimpo);
+        } catch {
+          throw new Error("Informe um link válido, começando com https://");
+        }
+        if (!/^https?:$/.test(endereco.protocol)) {
+          throw new Error("O link precisa começar com http:// ou https://");
+        }
+        if (documento?.tipo === "file" && documento.storage_path) {
+          caminhoAntigo = documento.storage_path;
+        }
+        campos.tipo = "link";
+        campos.url = enderecoLimpo;
+        campos.storage_path = null;
+        campos.file_name = null;
+        campos.file_size = null;
+      } else {
+        const jaTemArquivo = documento?.tipo === "file" && Boolean(documento.storage_path);
+        if (!arquivo && !jaTemArquivo) {
+          throw new Error("Escolha o arquivo PDF que será enviado.");
+        }
+        if (arquivo) {
+          setEnviandoArquivo(true);
+          const caminho = `${userId}/${crypto.randomUUID()}-${arquivo.name}`;
+          const { error: erroUpload } = await supabase.storage
+            .from("documentos")
+            .upload(caminho, arquivo, { contentType: "application/pdf" });
+          setEnviandoArquivo(false);
+          if (erroUpload) {
+            throw new Error(`Não foi possível enviar o arquivo: ${erroUpload.message}`);
           }
-        }}
-      >
-        <DialogContent className="flex h-[90dvh] w-[calc(100%-1rem)] max-w-5xl flex-col gap-0 p-0">
-          <DialogHeader className="border-b border-border px-4 py-4 pr-12 sm:px-5">
-            <div className="min-w-0 max-w-full">
-              <DialogTitle className="truncate font-display text-base sm:text-lg">
-                {documentoPreview?.titulo}
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Visualização do documento técnico selecionado.
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          {urlPreview ? (
-            <iframe
-              title={documentoPreview?.titulo ?? "Visualização do documento"}
-              src={urlPreview}
-              className="min-h-0 flex-1 bg-muted"
-            />
-          ) : null}
-          {documentoPreview ? (
-            <div className="flex items-center justify-between gap-3 border-t border-border bg-card px-4 py-3 sm:px-5">
-              <p className="hidden text-xs text-muted-foreground sm:block">
-                O PDF não abriu aqui? Baixe o arquivo para ver no leitor do seu computador.
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => void baixarDocumento(documentoPreview)}
-              >
-                <Download className="h-4 w-4" />
-                Baixar PDF
-              </Button>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+          if (jaTemArquivo) caminhoAntigo = documento!.storage_path!;
+          campos.tipo = "file";
+          campos.storage_path = caminho;
+          campos.file_name = arquivo.name;
+          campos.file_size = arquivo.size;
+          campos.url = null;
+        }
+      }
 
-      <Dialog
-        open={Boolean(documentoHistorico)}
-        onOpenChange={(aberto) => !aberto && setDocumentoHistorico(null)}
-      >
-        <DialogContent className="max-h-[80dvh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-display">Histórico de versões</DialogTitle>
-            <DialogDescription>
-              {documentoHistorico?.titulo}
-              {documentoHistorico?.versao ? ` · revisão atual ${documentoHistorico.versao}` : ""}
-            </DialogDescription>
-          </DialogHeader>
-          {documentoHistorico ? (
-            <HistoricoDocumento
-              documentoId={documentoHistorico.id}
-              podeRestaurar={Boolean(acesso?.admin)}
-              onRestaurar={(versaoId) => setVersaoParaRestaurar(versaoId)}
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      if (documento) {
+        const { error } = await supabase.from("documentos").update(campos).eq("id", documento.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("documentos")
+          .insert({ ...campos, titulo: campos.titulo!, created_by: userId });
+        if (error) throw error;
+      }
 
-      <AlertDialog
-        open={Boolean(versaoParaRestaurar)}
-        onOpenChange={(aberto) => !aberto && setVersaoParaRestaurar(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restaurar esta versão?</AlertDialogTitle>
-            <AlertDialogDescription>
-              O documento voltará aos dados desta versão. A versão atual será preservada no
-              histórico e a ação ficará registrada na auditoria.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void restaurarVersao()}>
-              Restaurar versão
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      if (caminhoAntigo) {
+        await supabase.storage.from("documentos").remove([caminhoAntigo]);
+      }
 
-      <AlertDialog open={Boolean(paraExcluir)} onOpenChange={(o) => !o && setParaExcluir(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover este documento?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>{paraExcluir?.titulo}</strong> sairá do catálogo para toda a empresa, junto
-              com o arquivo enviado. Essa ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (paraExcluir) void excluir(paraExcluir);
-                setParaExcluir(null);
-              }}
+      toast.success(documento ? "Documento atualizado." : "Documento salvo no catálogo.");
+      onSalvo();
+    } catch (err) {
+      const mensagem = err instanceof Error ? err.message : "Não foi possível salvar.";
+      console.error("Salvar documento falhou:", err);
+      toast.error(mensagem);
+    } finally {
+      setEnviandoArquivo(false);
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <Dialog open={aberto} onOpenChange={(o) => !o && !salvando && onFechar()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto border-t-[3px] border-t-gold sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display">
+            {documento ? "Editar documento" : "Adicionar documento"}
+          </DialogTitle>
+          <DialogDescription>
+            Envie o PDF direto ou cole o link de um arquivo já hospedado.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-1 rounded-sm bg-secondary p-1">
+          {(["upload", "link"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setModo(m)}
+              aria-pressed={modo === m}
+              className={`rounded-sm py-2 text-xs font-semibold transition-colors ${
+                modo === m
+                  ? "bg-card text-brand shadow-sm"
+                  : "text-muted-foreground hover:text-brand"
+              }`}
             >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              {m === "upload" ? "Enviar arquivo" : "Colar link"}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={salvar} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="titulo">Título do documento</Label>
+            <Input
+              id="titulo"
+              value={titulo}
+              onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ex: Manual de instalação — Visor Linha Truck"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="categoria">Categoria</Label>
+            <Select value={categoria} onValueChange={setCategoria}>
+              <SelectTrigger id="categoria">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIAS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="codigo-produto">Código / modelo</Label>
+              <Input
+                id="codigo-produto"
+                value={codigoProduto}
+                onChange={(e) => setCodigoProduto(e.target.value)}
+                placeholder="Ex: SVB-TRK-08"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="versao">Revisão (Rev.)</Label>
+              <Input
+                id="versao"
+                value={versao}
+                onChange={(e) => setVersao(e.target.value)}
+                placeholder="Ex: 01, 02..."
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="data-vigencia">Vigente até (opcional)</Label>
+            <Input
+              id="data-vigencia"
+              type="date"
+              value={dataVigencia}
+              onChange={(e) => setDataVigencia(e.target.value)}
+            />
+          </div>
+
+          {modo === "upload" ? (
+            <div className="space-y-1.5">
+              <Label>Arquivo PDF</Label>
+              <input
+                ref={inputArquivo}
+                type="file"
+                accept="application/pdf,.pdf"
+                className="hidden"
+                onChange={(e) => escolherArquivo(e.target.files?.[0] ?? null)}
+              />
+              {arquivo ? (
+                <div className="flex items-center gap-3 rounded-sm border border-border p-3">
+                  <FileText className="h-5 w-5 flex-shrink-0 text-brand" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{arquivo.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatarTamanho(arquivo.size)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Remover arquivo selecionado"
+                    onClick={() => {
+                      escolherArquivo(null);
+                      if (inputArquivo.current) inputArquivo.current.value = "";
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => inputArquivo.current?.click()}
+                  className="w-full rounded-sm border-[1.5px] border-dashed border-border px-4 py-6 text-center transition-colors hover:border-gold hover:bg-gold/5"
+                >
+                  <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">
+                    Clique para escolher o PDF
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted-foreground/70">
+                    {documento?.tipo === "file" && documento.file_name
+                      ? `Atual: ${documento.file_name} — envie outro para substituir`
+                      : "Tamanho máximo: 50 MB"}
+                  </p>
+                </button>
+              )}
+              {erroArquivo ? (
+                <p className="text-xs font-medium text-destructive">{erroArquivo}</p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="url">Link do PDF</Label>
+              <Input
+                id="url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://..."
+              />
+              <p className="text-xs text-muted-foreground/70">
+                O link deve abrir o PDF diretamente.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="descricao">Descrição (opcional)</Label>
+            <Textarea
+              id="descricao"
+              value={descricao}
+              onChange={(e) => setDescricao(e.target.value)}
+              placeholder="Breve nota sobre o conteúdo do documento"
+              className="min-h-16"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={onFechar} disabled={salvando}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="font-semibold" disabled={salvando}>
+              {enviandoArquivo
+                ? "Enviando arquivo..."
+                : salvando
+                  ? "Salvando..."
+                  : "Salvar documento"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
