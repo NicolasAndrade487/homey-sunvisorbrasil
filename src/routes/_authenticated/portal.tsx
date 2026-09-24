@@ -947,15 +947,14 @@ function Portal() {
     setCategoria(documento?.categoria ?? CATEGORIAS[0]);
     setCodigoProduto(documento?.codigo_produto ?? "");
     
-    // Automatização inteligente da Revisão:
-    // Se for um documento novo, sugere "01" (ou Rev. 01). 
-    // Se for edição e já tiver versão, você pode incrementar ou deixar a anterior.
+    // Se for edição, mantém a versão atual ou incrementa se o usuário anexar um arquivo novo.
+    // Se for novo documento, inicia automaticamente como "01".
     if (documento?.versao) {
       setVersao(documento.versao);
     } else if (!documento) {
-      setVersao("01"); // Começa limpo e automático como 01 para novos documentos
+      setVersao("01");
     } else {
-      setVersao("");
+      setVersao("01");
     }
 
     setDataVigencia(documento?.data_vigencia ?? "");
@@ -981,13 +980,23 @@ function Portal() {
     }
     if (selecionado.size > LIMITE_BYTES) {
       setErroArquivo(
-        `Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB. Reduza o PDF ou cadastre pelo link.`,
+        `Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB.`,
       );
       setArquivo(null);
       return;
     }
     setErroArquivo(null);
     setArquivo(selecionado);
+
+    // Dica inteligente: se o usuário selecionou um arquivo NOVO durante a edição,
+    // podemos sugerir automaticamente que a revisão avance 1 número (ex: de 01 para 02)
+    if (documento?.versao) {
+      const numeroAtual = parseInt(documento.versao.replace(/\D/g, ""), 10);
+      if (!isNaN(numeroAtual)) {
+        const proximaRev = String(numeroAtual + 1).padStart(2, "0");
+        setVersao(proximaRev);
+      }
+    }
   }
 
   async function salvar(e: React.FormEvent) {
@@ -1003,10 +1012,9 @@ function Portal() {
       const userId = sessao.user?.id;
       if (!userId) throw new Error("Sessão expirada. Entre novamente.");
 
-      // Padroniza a versão automaticamente se o usuário digitar apenas números (ex: "1" vira "01" ou "Rev. 01")
       let versaoFormatada = versao.trim();
       if (versaoFormatada && !/rev/i.test(versaoFormatada)) {
-        versaoFormatada = `0${versaoFormatada}`.slice(-2); // Garante 2 dígitos (ex: 1 -> 01)
+        versaoFormatada = `0${versaoFormatada}`.slice(-2);
       }
 
       const campos: Partial<Documento> = {
