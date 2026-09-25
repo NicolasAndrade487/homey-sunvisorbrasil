@@ -106,9 +106,17 @@ const ICONES: Record<string, typeof FileText> = {
 
 const LIMITE_BYTES = 50 * 1024 * 1024;
 const EMAIL_SUPORTE = "suporte@sunvisorbrasil.com.br";
-const ADMIN_EMAILS = ["admin@sunvisorbrasil.com.br", "admin@sunvisorbrasil.com"] as const;
+const ADMIN_EMAILS = [
+  "admin@sunvisorbrasil.com.br",
+  "admin@sunvisorbrasil.com",
+] as const;
 
-/** Preferências de exibição sobrevivem ao reload, mas nunca quebram a tela se o storage falhar. */
+export type AcessoUsuario = {
+  admin: boolean;
+  podeAtualizar: boolean;
+  podeExcluir: boolean;
+} | null | undefined;
+
 function lerPreferencia<T extends string>(chave: string, valido: readonly T[], padrao: T): T {
   if (typeof window === "undefined") return padrao;
   try {
@@ -123,7 +131,7 @@ function gravarPreferencia(chave: string, valor: string) {
   try {
     window.localStorage.setItem(chave, valor);
   } catch {
-    /* modo privado ou storage cheio: a preferência simplesmente não persiste */
+    // modo privado ou storage cheio: a preferência simplesmente não persiste
   }
 }
 
@@ -144,9 +152,9 @@ function Portal() {
   const [filtroRapido, setFiltroRapido] = useState<
     "todos" | "favoritos" | "adicionados" | "acessados"
   >("todos");
+  
   const [modalAberto, setModalAberto] = useState(false);
   const [importacaoAberta, setImportacaoAberta] = useState(false);
-
   const [editando, setEditando] = useState<Documento | null>(null);
   const [paraExcluir, setParaExcluir] = useState<Documento | null>(null);
   const [documentoPreview, setDocumentoPreview] = useState<Documento | null>(null);
@@ -165,7 +173,6 @@ function Portal() {
     [filtrosVisiveis],
   );
 
-  /** Atalho "/" foca a busca — o técnico acha o manual sem tirar a mão do teclado. */
   useEffect(() => {
     function aoTeclar(evento: KeyboardEvent) {
       if (evento.key !== "/" || evento.metaKey || evento.ctrlKey) return;
@@ -181,12 +188,12 @@ function Portal() {
 
   const { data: acesso, isLoading: carregandoAcesso } = useQuery({
     queryKey: ["meu-acesso"],
-    staleTime: 1000 * 60 * 15, // 15 minutos sem refetch automático (evita sobrecarga ao focar a janela)
+    staleTime: 1000 * 60 * 15,
     queryFn: async () => {
       const { data: sessao } = await supabase.auth.getUser();
       const uid = sessao.user?.id;
       const email = sessao.user?.email ?? null;
-      if (!uid)
+      if (!uid) {
         return {
           aprovado: false,
           status: "pendente",
@@ -197,6 +204,7 @@ function Portal() {
           id: null,
           email: email ?? null,
         };
+      }
       const [{ data: perfil }, { data: papeis, error: erroPapeis }] = await Promise.all([
         supabase
           .from("profiles")
@@ -234,7 +242,7 @@ function Portal() {
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ["documentos"],
     enabled: aprovado && Boolean(acesso?.podeLer),
-    staleTime: 1000 * 60 * 5, // Mantém cache por 5 min para evitar DB hits desnecessários
+    staleTime: 1000 * 60 * 5,
     queryFn: async (): Promise<Documento[]> => {
       const { data, error } = await supabase
         .from("documentos")
@@ -250,9 +258,7 @@ function Portal() {
     enabled: Boolean(usuarioId && acesso?.podeLer),
     staleTime: Infinity,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("documentos_favoritos")
-        .select("documento_id");
+      const { data, error } = await supabase.from("documentos_favoritos").select("documento_id");
       if (error) throw error;
       return data.map((item) => item.documento_id);
     },
@@ -339,7 +345,6 @@ function Portal() {
     documentosAcessados,
   ]);
 
-  /** Trocar de filtro devolve a lista ao topo em vez de deixar o usuário no meio do nada. */
   useEffect(() => {
     areaCards.current?.scrollTo({ top: 0 });
   }, [categoriaAtiva, filtroRapido, busca, ordenacao]);
@@ -347,13 +352,11 @@ function Portal() {
   const registrarAcesso = useCallback(
     (documentoId: string) => {
       if (!usuarioId) return;
-
       const chave = ["documentos-recentes", usuarioId] as const;
       queryClient.setQueryData<string[]>(chave, (atuais = []) => {
         const semOAtual = atuais.filter((id) => id !== documentoId);
         return [documentoId, ...semOAtual].slice(0, 20);
       });
-
       void supabase
         .from("documentos_recentes")
         .upsert(
@@ -368,28 +371,21 @@ function Portal() {
   async function alternarFavorito(documentoId: string) {
     if (!usuarioId) return;
     const chaveFavoritos = ["documentos-favoritos", usuarioId] as const;
-    
     await queryClient.cancelQueries({ queryKey: chaveFavoritos });
 
     const favoritosAnteriores = queryClient.getQueryData<string[]>(chaveFavoritos) || [];
     const marcado = favoritosAnteriores.includes(documentoId);
-    
+
     const favoritosAtualizados = marcado
       ? favoritosAnteriores.filter((id) => id !== documentoId)
       : [...favoritosAnteriores, documentoId];
-      
+
     queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAtualizados);
 
     const resultado = marcado
-      ? await supabase
-          .from("documentos_favoritos")
-          .delete()
-          .eq("user_id", usuarioId)
-          .eq("documento_id", documentoId)
-      : await supabase
-          .from("documentos_favoritos")
-          .insert({ user_id: usuarioId, documento_id: documentoId });
-          
+      ? await supabase.from("documentos_favoritos").delete().eq("user_id", usuarioId).eq("documento_id", documentoId)
+      : await supabase.from("documentos_favoritos").insert({ user_id: usuarioId, documento_id: documentoId });
+
     if (resultado.error) {
       queryClient.setQueryData<string[]>(chaveFavoritos, favoritosAnteriores);
       toast.error(`Não foi possível atualizar o favorito: ${resultado.error.message}`);
@@ -397,16 +393,10 @@ function Portal() {
   }
 
   async function obterUrlDocumento(doc: Documento) {
-    if (doc.tipo === "link" && doc.url) {
-      return doc.url;
-    }
+    if (doc.tipo === "link" && doc.url) return doc.url;
     if (!doc.storage_path) return null;
-    const { data, error } = await supabase.storage
-      .from("documentos")
-      .createSignedUrl(doc.storage_path, 300);
-    if (error || !data) {
-      throw new Error("Não foi possível acessar o arquivo.");
-    }
+    const { data, error } = await supabase.storage.from("documentos").createSignedUrl(doc.storage_path, 300);
+    if (error || !data) throw new Error("Não foi possível acessar o arquivo.");
     return data.signedUrl;
   }
 
@@ -425,9 +415,8 @@ function Portal() {
     }
   }
 
- async function baixarDocumento(doc: Documento) {
+  async function baixarDocumento(doc: Documento) {
     const loadingToast = toast.loading("Baixando arquivo...");
-    
     try {
       const url = await obterUrlDocumento(doc);
       if (!url) {
@@ -435,11 +424,9 @@ function Portal() {
         toast.error("Este documento não tem arquivo nem link cadastrado.");
         return;
       }
-      
       registrarAcesso(doc.id);
       const nomeArquivo = doc.file_name || `${doc.titulo}.pdf`;
 
-      // Força o download via fetch do blob gerado pela Signed URL
       const resposta = await fetch(url);
       if (!resposta.ok) throw new Error("Falha ao baixar o arquivo.");
       
@@ -457,7 +444,6 @@ function Portal() {
       toast.success("Download concluído.");
     } catch {
       toast.dismiss(loadingToast);
-      // Fallback caso o navegador bloqueie o blob por CORS
       if (doc.url || doc.storage_path) {
         window.open(doc.url || (await obterUrlDocumento(doc)) || "", "_blank");
       } else {
@@ -476,7 +462,7 @@ function Portal() {
       }
       const { error } = await supabase.from("documentos").delete().eq("id", doc.id);
       if (error) throw error;
-      
+
       if (usuarioId) {
         queryClient.setQueryData<string[]>(["documentos-favoritos", usuarioId], (atuais = []) => atuais.filter((id) => id !== doc.id));
         queryClient.setQueryData<string[]>(["documentos-recentes", usuarioId], (atuais = []) => atuais.filter((id) => id !== doc.id));
@@ -493,9 +479,7 @@ function Portal() {
     if (!versaoParaRestaurar) return;
     const versaoId = versaoParaRestaurar;
     setVersaoParaRestaurar(null);
-    const { error } = await supabase.rpc("restaurar_versao_documento", {
-      _versao_id: versaoId,
-    });
+    const { error } = await supabase.rpc("restaurar_versao_documento", { _versao_id: versaoId });
     if (error) {
       toast.error(`Não foi possível restaurar: ${error.message}`);
       return;
@@ -516,7 +500,7 @@ function Portal() {
 
   if (carregandoAcesso) {
     return (
-      <div className="flex min-h-screen [min-height:100dvh] items-center justify-center bg-background">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Verificando seu acesso...</p>
       </div>
     );
@@ -524,7 +508,7 @@ function Portal() {
 
   if (!aprovado) {
     return (
-      <div className="relative flex min-h-screen [min-height:100dvh] flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
+      <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-gradient-to-br from-brand-deep via-brand to-brand px-4 py-12">
         <div
           aria-hidden
           className="absolute inset-0 z-0 opacity-[0.14]"
@@ -555,10 +539,7 @@ function Portal() {
           <Button variant="outline" className="mt-6 w-full" onClick={sair}>
             Sair
           </Button>
-          <LinkSuporte
-            assunto={`Liberação de acesso — ${acesso?.email ?? "conta SVB"}`}
-            className="mt-4 justify-center text-xs"
-          />
+          <LinkSuporte assunto={`Liberação de acesso — ${acesso?.email ?? "conta SVB"}`} className="mt-4 justify-center text-xs" />
         </div>
         <p className="relative z-10 mt-6 text-xs text-primary-foreground/50">Acesso restrito · SVB</p>
       </div>
@@ -567,23 +548,20 @@ function Portal() {
 
   if (!acesso?.podeLer) {
     return (
-      <div className="flex min-h-screen [min-height:100dvh] flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
         <ShieldCheck className="h-8 w-8 text-brand" />
         <h1 className="font-display text-xl font-semibold">Leitura não autorizada</h1>
         <p className="max-w-sm text-sm text-muted-foreground">
           Sua conta está aprovada, mas ainda não recebeu permissão para consultar os documentos.
         </p>
         <Button variant="outline" onClick={sair}>Sair</Button>
-        <LinkSuporte
-          assunto={`Permissão de leitura — ${acesso?.email ?? "conta SVB"}`}
-          className="text-xs"
-        />
+        <LinkSuporte assunto={`Permissão de leitura — ${acesso?.email ?? "conta SVB"}`} className="text-xs" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen [height:100dvh] flex-col overflow-hidden bg-background">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       <header className="relative shrink-0 overflow-hidden border-b-[3px] border-b-gold bg-gradient-to-br from-brand-deep via-brand to-brand">
         <div
           aria-hidden
@@ -697,11 +675,7 @@ function Portal() {
                     }`}
                   >
                     {cat}
-                    <span
-                      className={`ml-1.5 text-xs ${
-                        ativo ? "text-primary-foreground/70" : "text-muted-foreground"
-                      }`}
-                    >
+                    <span className={`ml-1.5 text-xs ${ativo ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                       {total}
                     </span>
                   </button>
@@ -758,11 +732,7 @@ function Portal() {
               onClick={() => setFiltrosVisiveis((atual) => !atual)}
               aria-expanded={filtrosVisiveis}
             >
-              {filtrosVisiveis ? (
-                <ChevronUp className="h-3.5 w-3.5" />
-              ) : (
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-              )}
+              {filtrosVisiveis ? <ChevronUp className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />}
               {filtrosVisiveis ? "Ocultar filtros" : "Mostrar filtros"}
             </Button>
             <Select value={ordenacao} onValueChange={(valor) => setOrdenacao(valor as typeof ordenacao)}>
@@ -806,26 +776,15 @@ function Portal() {
       <main ref={areaCards} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 sm:py-5">
           {isLoading ? (
-            <div
-              className={
-                visualizacao === "grade"
-                  ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                  : "space-y-2"
-              }
-            >
+            <div className={visualizacao === "grade" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
               {Array.from({ length: 6 }).map((_, indice) => (
-                <div
-                  key={indice}
-                  className="h-40 animate-pulse rounded-sm border border-l-[3px] border-border border-l-brand/30 bg-card"
-                />
+                <div key={indice} className="h-40 animate-pulse rounded-sm border border-l-[3px] border-border border-l-brand/30 bg-card" />
               ))}
             </div>
           ) : filtrados.length === 0 ? (
             <div className="py-16 text-center">
               <FileText className="mx-auto h-10 w-10 text-muted-foreground/40" />
-              <h2 className="mt-4 font-display text-lg font-medium text-brand">
-                Nenhum documento encontrado
-              </h2>
+              <h2 className="mt-4 font-display text-lg font-medium text-brand">Nenhum documento encontrado</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 {documentos.length === 0
                   ? "Ainda não há documentos cadastrados. Adicione o primeiro."
@@ -844,13 +803,7 @@ function Portal() {
               ) : null}
             </div>
           ) : (
-            <div
-              className={
-                visualizacao === "grade"
-                  ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-                  : "space-y-2"
-              }
-            >
+            <div className={visualizacao === "grade" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-2"}>
               {filtrados.map((doc) => (
                 <CartaoDocumento
                   key={doc.id}
@@ -860,9 +813,7 @@ function Portal() {
                   expandida={descricaoExpandida === doc.id}
                   acesso={acesso}
                   onAlternarFavorito={() => void alternarFavorito(doc.id)}
-                  onExpandir={() =>
-                    setDescricaoExpandida((atual) => (atual === doc.id ? null : doc.id))
-                  }
+                  onExpandir={() => setDescricaoExpandida((atual) => (atual === doc.id ? null : doc.id))}
                   onEditar={() => {
                     setEditando(doc);
                     setModalAberto(true);
@@ -888,7 +839,6 @@ function Portal() {
               Sun Visor Brasil <span className="text-border">·</span> uso interno
             </span>
           </div>
-
           <a
             href={`mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent("Suporte — Portal de Documentos SVB")}`}
             title="Informe seu nome, o documento e o que aconteceu"
@@ -900,14 +850,334 @@ function Portal() {
             <span className="text-xs font-medium text-muted-foreground transition-colors group-hover:text-brand">
               Precisa de ajuda?
             </span>
-            <span className="hidden text-xs font-semibold text-brand sm:inline">
-              {EMAIL_SUPORTE}
-            </span>
+            <span className="hidden text-xs font-semibold text-brand sm:inline">{EMAIL_SUPORTE}</span>
           </a>
         </div>
       </footer>
 
-      function FormularioDocumento({
+      {/* --- Todos os modais ficam aqui fora do layout principal --- */}
+      <FormularioDocumento
+        aberto={modalAberto}
+        documento={editando}
+        onFechar={() => {
+          setModalAberto(false);
+          setEditando(null);
+        }}
+        onSalvo={() => {
+          setModalAberto(false);
+          setEditando(null);
+          queryClient.invalidateQueries({ queryKey: ["documentos"] });
+        }}
+      />
+
+      <ImportacaoLote
+        aberto={importacaoAberta}
+        onFechar={() => setImportacaoAberta(false)}
+        onSalvo={() => {
+          setImportacaoAberta(false);
+          queryClient.invalidateQueries({ queryKey: ["documentos"] });
+        }}
+      />
+
+      <Dialog open={!!urlPreview} onOpenChange={(o) => !o && setUrlPreview(null)}>
+        <DialogContent className="flex h-[90dvh] max-w-4xl flex-col p-0">
+          <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
+            <DialogTitle>{documentoPreview?.titulo}</DialogTitle>
+            <DialogDescription className="sr-only">Visualização de documento</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 bg-muted">
+            {urlPreview && <iframe src={urlPreview} className="h-full w-full border-0" title="Visualização" />}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!documentoHistorico} onOpenChange={(o) => !o && setDocumentoHistorico(null)}>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Histórico de versões</DialogTitle>
+            <DialogDescription>{documentoHistorico?.titulo}</DialogDescription>
+          </DialogHeader>
+          {documentoHistorico && (
+            <HistoricoDocumento
+              documentoId={documentoHistorico.id}
+              podeRestaurar={!!acesso?.podeAtualizar}
+              onRestaurar={setVersaoParaRestaurar}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!versaoParaRestaurar} onOpenChange={(o) => !o && setVersaoParaRestaurar(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restaurar versão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O documento voltará para a versão selecionada. A versão atual será guardada no histórico.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={restaurarVersao}>Restaurar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!paraExcluir} onOpenChange={(o) => !o && setParaExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir documento?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover "{paraExcluir?.titulo}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (paraExcluir) void excluir(paraExcluir);
+                setParaExcluir(null);
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// -------------------------------------------------------------------------
+// Componentes Auxiliares (Fora do Portal)
+// -------------------------------------------------------------------------
+
+function LinkSuporte({ assunto, className = "" }: { assunto?: string; className?: string }) {
+  const href = assunto
+    ? `mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent(assunto)}`
+    : `mailto:${EMAIL_SUPORTE}`;
+  return (
+    <a
+      href={href}
+      className={`inline-flex items-center gap-1 font-medium text-brand underline-offset-2 hover:underline ${className}`}
+    >
+      <Mail className="h-3 w-3" />
+      {EMAIL_SUPORTE}
+    </a>
+  );
+}
+
+function CartaoDocumento({
+  doc,
+  visualizacao,
+  favorito,
+  expandida,
+  acesso,
+  onAlternarFavorito,
+  onExpandir,
+  onEditar,
+  onExcluir,
+  onHistorico,
+  onBaixar,
+  onVisualizar,
+}: {
+  doc: Documento;
+  visualizacao: "grade" | "lista";
+  favorito: boolean;
+  expandida: boolean;
+  acesso: AcessoUsuario;
+  onAlternarFavorito: () => void;
+  onExpandir: () => void;
+  onEditar: () => void;
+  onExcluir: () => void;
+  onHistorico: () => void;
+  onBaixar: () => void;
+  onVisualizar: () => void;
+}) {
+  const Icone = ICONES[doc.categoria] ?? HelpCircle;
+  const desatualizado = Boolean(
+    doc.data_vigencia && new Date(`${doc.data_vigencia}T23:59:59`) < new Date(),
+  );
+  const emLista = visualizacao === "lista";
+
+  const selos = (
+    <>
+      <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
+        {doc.categoria}
+      </span>
+      {doc.data_vigencia ? (
+        <span
+          className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
+            desatualizado ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700"
+          }`}
+        >
+          {desatualizado ? "Desatualizado" : "Vigente"}
+        </span>
+      ) : null}
+    </>
+  );
+
+  const botaoFavorito = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={`h-7 w-7 shrink-0 ${favorito ? "text-gold" : "text-muted-foreground"}`}
+      title={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+      aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+      aria-pressed={favorito}
+      onClick={onAlternarFavorito}
+    >
+      <Star className={`h-4 w-4 ${favorito ? "fill-current" : ""}`} />
+    </Button>
+  );
+
+  const menuMais = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0 text-muted-foreground"
+          title="Mais ações"
+          aria-label={`Mais ações para ${doc.titulo}`}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={onHistorico}>
+          <History className="h-3.5 w-3.5" /> Histórico de versões
+        </DropdownMenuItem>
+        {acesso?.podeAtualizar ? (
+          <DropdownMenuItem onClick={onEditar}>
+            <Pencil className="h-3.5 w-3.5" /> Editar
+          </DropdownMenuItem>
+        ) : null}
+        {acesso?.podeExcluir ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onExcluir} className="text-destructive focus:text-destructive">
+              <Trash2 className="h-3.5 w-3.5" /> Remover
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const botaoBaixar = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-7 w-7 shrink-0 text-muted-foreground"
+      title="Baixar"
+      aria-label={`Baixar ${doc.titulo}`}
+      onClick={onBaixar}
+    >
+      <Download className="h-3.5 w-3.5" />
+    </Button>
+  );
+
+  const botaoVisualizar = (
+    <Button
+      size="sm"
+      className="h-8 shrink-0 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
+      onClick={onVisualizar}
+    >
+      Visualizar <Eye className="h-3 w-3" />
+    </Button>
+  );
+
+  const identificacao =
+    doc.codigo_produto || doc.versao ? (
+      <p className="text-xs font-medium text-brand">
+        {doc.codigo_produto ? `Código: ${doc.codigo_produto}` : ""}
+        {doc.codigo_produto && doc.versao ? " · " : ""}
+        {doc.versao ? `Rev. ${doc.versao}` : ""}
+      </p>
+    ) : null;
+
+  const rodapeMeta = (
+    <span className="shrink-0 text-xs text-muted-foreground/80">
+      {formatarData(doc.created_at)}
+      {doc.tipo === "file" && doc.file_size ? ` · ${formatarTamanho(doc.file_size)}` : ""}
+    </span>
+  );
+
+  if (emLista) {
+    return (
+      <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-3 transition-colors hover:border-l-gold sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-secondary">
+            <Icone className="h-4 w-4 text-brand" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="min-w-0 truncate font-display text-base font-medium text-card-foreground">
+                {doc.titulo}
+              </h2>
+              {selos}
+            </div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+              {identificacao}
+              {identificacao ? <span aria-hidden>·</span> : null}
+              {rodapeMeta}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-1 sm:ml-auto">
+          {botaoFavorito}
+          {menuMais}
+          {botaoBaixar}
+          {botaoVisualizar}
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-4 transition-all hover:border-l-gold hover:shadow-md">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-secondary">
+          <Icone className="h-4 w-4 text-brand" />
+        </div>
+        <div className="flex flex-wrap items-start justify-end gap-1">
+          {botaoFavorito}
+          {selos}
+        </div>
+      </div>
+
+      <h2 className="font-display text-base font-medium leading-snug text-card-foreground">
+        {doc.titulo}
+      </h2>
+      {identificacao}
+
+      <p className={`flex-1 text-sm leading-relaxed text-muted-foreground ${expandida ? "" : "line-clamp-3"}`}>
+        {doc.descricao || "Sem descrição adicional."}
+      </p>
+      {doc.descricao && doc.descricao.length > 140 ? (
+        <button
+          type="button"
+          className="self-start text-xs font-semibold text-brand hover:underline"
+          onClick={onExpandir}
+        >
+          {expandida ? "Ver menos" : "Ver mais"}
+        </button>
+      ) : null}
+
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
+        {rodapeMeta}
+        <div className="flex shrink-0 items-center gap-1">
+          {menuMais}
+          {botaoBaixar}
+          {botaoVisualizar}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FormularioDocumento({
   aberto,
   documento,
   onFechar,
@@ -947,8 +1217,6 @@ function Portal() {
     setCategoria(documento?.categoria ?? CATEGORIAS[0]);
     setCodigoProduto(documento?.codigo_produto ?? "");
     
-    // Se for edição, mantém a versão atual ou incrementa se o usuário anexar um arquivo novo.
-    // Se for novo documento, inicia automaticamente como "01".
     if (documento?.versao) {
       setVersao(documento.versao);
     } else if (!documento) {
@@ -971,25 +1239,20 @@ function Portal() {
       setErroArquivo(null);
       return;
     }
-    const ehPdf =
-      selecionado.type === "application/pdf" || /\.pdf$/i.test(selecionado.name);
+    const ehPdf = selecionado.type === "application/pdf" || /\.pdf$/i.test(selecionado.name);
     if (!ehPdf) {
       setErroArquivo("Envie um arquivo em PDF.");
       setArquivo(null);
       return;
     }
     if (selecionado.size > LIMITE_BYTES) {
-      setErroArquivo(
-        `Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB.`,
-      );
+      setErroArquivo(`Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB.`);
       setArquivo(null);
       return;
     }
     setErroArquivo(null);
     setArquivo(selecionado);
 
-    // Dica inteligente: se o usuário selecionou um arquivo NOVO durante a edição,
-    // podemos sugerir automaticamente que a revisão avance 1 número (ex: de 01 para 02)
     if (documento?.versao) {
       const numeroAtual = parseInt(documento.versao.replace(/\D/g, ""), 10);
       if (!isNaN(numeroAtual)) {
@@ -1117,9 +1380,7 @@ function Portal() {
               onClick={() => setModo(m)}
               aria-pressed={modo === m}
               className={`rounded-sm py-2 text-xs font-semibold transition-colors ${
-                modo === m
-                  ? "bg-card text-brand shadow-sm"
-                  : "text-muted-foreground hover:text-brand"
+                modo === m ? "bg-card text-brand shadow-sm" : "text-muted-foreground hover:text-brand"
               }`}
             >
               {m === "upload" ? "Enviar arquivo" : "Colar link"}
@@ -1130,12 +1391,7 @@ function Portal() {
         <form onSubmit={salvar} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="titulo">Título do documento</Label>
-            <Input
-              id="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ex: Manual de instalação — Visor Linha Truck"
-            />
+            <Input id="titulo" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Manual de instalação — Visor Linha Truck" />
           </div>
 
           <div className="space-y-1.5">
@@ -1157,32 +1413,17 @@ function Portal() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="codigo-produto">Código / modelo</Label>
-              <Input
-                id="codigo-produto"
-                value={codigoProduto}
-                onChange={(e) => setCodigoProduto(e.target.value)}
-                placeholder="Ex: SVB-TRK-08"
-              />
+              <Input id="codigo-produto" value={codigoProduto} onChange={(e) => setCodigoProduto(e.target.value)} placeholder="Ex: SVB-TRK-08" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="versao">Revisão (Rev.)</Label>
-              <Input
-                id="versao"
-                value={versao}
-                onChange={(e) => setVersao(e.target.value)}
-                placeholder="Ex: 01, 02..."
-              />
+              <Input id="versao" value={versao} onChange={(e) => setVersao(e.target.value)} placeholder="Ex: 01, 02..." />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="data-vigencia">Vigente até (opcional)</Label>
-            <Input
-              id="data-vigencia"
-              type="date"
-              value={dataVigencia}
-              onChange={(e) => setDataVigencia(e.target.value)}
-            />
+            <Input id="data-vigencia" type="date" value={dataVigencia} onChange={(e) => setDataVigencia(e.target.value)} />
           </div>
 
           {modo === "upload" ? (
@@ -1200,9 +1441,7 @@ function Portal() {
                   <FileText className="h-5 w-5 flex-shrink-0 text-brand" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">{arquivo.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatarTamanho(arquivo.size)}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{formatarTamanho(arquivo.size)}</p>
                   </div>
                   <Button
                     type="button"
@@ -1225,9 +1464,7 @@ function Portal() {
                   className="w-full rounded-sm border-[1.5px] border-dashed border-border px-4 py-6 text-center transition-colors hover:border-gold hover:bg-gold/5"
                 >
                   <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    Clique para escolher o PDF
-                  </p>
+                  <p className="mt-2 text-sm font-medium text-muted-foreground">Clique para escolher o PDF</p>
                   <p className="mt-0.5 text-xs text-muted-foreground/70">
                     {documento?.tipo === "file" && documento.file_name
                       ? `Atual: ${documento.file_name} — envie outro para substituir`
@@ -1235,23 +1472,13 @@ function Portal() {
                   </p>
                 </button>
               )}
-              {erroArquivo ? (
-                <p className="text-xs font-medium text-destructive">{erroArquivo}</p>
-              ) : null}
+              {erroArquivo ? <p className="text-xs font-medium text-destructive">{erroArquivo}</p> : null}
             </div>
           ) : (
             <div className="space-y-1.5">
               <Label htmlFor="url">Link do PDF</Label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-              />
-              <p className="text-xs text-muted-foreground/70">
-                O link deve abrir o PDF diretamente.
-              </p>
+              <Input id="url" type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." />
+              <p className="text-xs text-muted-foreground/70">O link deve abrir o PDF diretamente.</p>
             </div>
           )}
 
@@ -1271,610 +1498,7 @@ function Portal() {
               Cancelar
             </Button>
             <Button type="submit" className="font-semibold" disabled={salvando}>
-              {enviandoArquivo
-                ? "Enviando arquivo..."
-                : salvando
-                  ? "Salvando..."
-                  : "Salvar documento"}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function LinkSuporte({
-  assunto,
-  className = "",
-}: {
-  assunto?: string;
-  className?: string;
-}) {
-  const href = assunto
-    ? `mailto:${EMAIL_SUPORTE}?subject=${encodeURIComponent(assunto)}`
-    : `mailto:${EMAIL_SUPORTE}`;
-  return (
-    <a
-      href={href}
-      className={`inline-flex items-center gap-1 font-medium text-brand underline-offset-2 hover:underline ${className}`}
-    >
-      <Mail className="h-3 w-3" />
-      {EMAIL_SUPORTE}
-    </a>
-  );
-}
-
-type AcessoUsuario = {
-  admin: boolean;
-  podeAtualizar: boolean;
-  podeExcluir: boolean;
-} | null | undefined;
-
-function CartaoDocumento({
-  doc,
-  visualizacao,
-  favorito,
-  expandida,
-  acesso,
-  onAlternarFavorito,
-  onExpandir,
-  onEditar,
-  onExcluir,
-  onHistorico,
-  onBaixar,
-  onVisualizar,
-}: {
-  doc: Documento;
-  visualizacao: "grade" | "lista";
-  favorito: boolean;
-  expandida: boolean;
-  acesso: AcessoUsuario;
-  onAlternarFavorito: () => void;
-  onExpandir: () => void;
-  onEditar: () => void;
-  onExcluir: () => void;
-  onHistorico: () => void;
-  onBaixar: () => void;
-  onVisualizar: () => void;
-}) {
-  const Icone = ICONES[doc.categoria] ?? HelpCircle;
-  const desatualizado = Boolean(
-    doc.data_vigencia && new Date(`${doc.data_vigencia}T23:59:59`) < new Date(),
-  );
-  const emLista = visualizacao === "lista";
-
-  const selos = (
-    <>
-      <span className="rounded-full bg-secondary px-2.5 py-1 text-[10.5px] font-semibold tracking-wide text-brand">
-        {doc.categoria}
-      </span>
-      {doc.data_vigencia ? (
-        <span
-          className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
-            desatualizado
-              ? "bg-destructive/10 text-destructive"
-              : "bg-emerald-500/10 text-emerald-700"
-          }`}
-        >
-          {desatualizado ? "Desatualizado" : "Vigente"}
-        </span>
-      ) : null}
-    </>
-  );
-
-  const botaoFavorito = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className={`h-7 w-7 shrink-0 ${favorito ? "text-gold" : "text-muted-foreground"}`}
-      title={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-      aria-label={favorito ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-      aria-pressed={favorito}
-      onClick={onAlternarFavorito}
-    >
-      <Star className={`h-4 w-4 ${favorito ? "fill-current" : ""}`} />
-    </Button>
-  );
-
-  const menuMais = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0 text-muted-foreground"
-          title="Mais ações"
-          aria-label={`Mais ações para ${doc.titulo}`}
-        >
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onClick={onHistorico}>
-          <History className="h-3.5 w-3.5" /> Histórico de versões
-        </DropdownMenuItem>
-        {acesso?.podeAtualizar ? (
-          <DropdownMenuItem onClick={onEditar}>
-            <Pencil className="h-3.5 w-3.5" /> Editar
-          </DropdownMenuItem>
-        ) : null}
-        {acesso?.podeExcluir ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onExcluir}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Remover
-            </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
-  const botaoBaixar = (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-7 w-7 shrink-0 text-muted-foreground"
-      title="Baixar"
-      aria-label={`Baixar ${doc.titulo}`}
-      onClick={onBaixar}
-    >
-      <Download className="h-3.5 w-3.5" />
-    </Button>
-  );
-
-  const botaoVisualizar = (
-    <Button
-      size="sm"
-      className="h-8 shrink-0 bg-brand text-xs font-semibold text-primary-foreground hover:bg-brand/90"
-      onClick={onVisualizar}
-    >
-      Visualizar <Eye className="h-3 w-3" />
-    </Button>
-  );
-
-  const identificacao =
-    doc.codigo_produto || doc.versao ? (
-      <p className="text-xs font-medium text-brand">
-        {doc.codigo_produto ? `Código: ${doc.codigo_produto}` : ""}
-        {doc.codigo_produto && doc.versao ? " · " : ""}
-        {doc.versao ? `Rev. ${doc.versao}` : ""}
-      </p>
-    ) : null;
-
-  const rodapeMeta = (
-    <span className="shrink-0 text-xs text-muted-foreground/80">
-      {formatarData(doc.created_at)}
-      {doc.tipo === "file" && doc.file_size ? ` · ${formatarTamanho(doc.file_size)}` : ""}
-    </span>
-  );
-
-  if (emLista) {
-    return (
-      <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-3 transition-colors hover:border-l-gold sm:flex-row sm:items-center sm:gap-3 sm:px-4 sm:py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-secondary">
-            <Icone className="h-4 w-4 text-brand" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 className="min-w-0 truncate font-display text-base font-medium text-card-foreground">
-                {doc.titulo}
-              </h2>
-              {selos}
-            </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-              {identificacao}
-              {identificacao ? <span aria-hidden>·</span> : null}
-              {rodapeMeta}
-            </div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center justify-end gap-1 sm:ml-auto">
-          {botaoFavorito}
-          {menuMais}
-          {botaoBaixar}
-          {botaoVisualizar}
-        </div>
-      </article>
-    );
-  }
-
-  return (
-    <article className="flex flex-col gap-2.5 rounded-sm border border-l-[3px] border-border border-l-brand bg-card p-4 transition-all hover:border-l-gold hover:shadow-md">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-sm bg-secondary">
-          <Icone className="h-4 w-4 text-brand" />
-        </div>
-        <div className="flex flex-wrap items-start justify-end gap-1">
-          {botaoFavorito}
-          {selos}
-        </div>
-      </div>
-
-      <h2 className="font-display text-base font-medium leading-snug text-card-foreground">
-        {doc.titulo}
-      </h2>
-      {identificacao}
-
-      <p
-        className={`flex-1 text-sm leading-relaxed text-muted-foreground ${
-          expandida ? "" : "line-clamp-3"
-        }`}
-      >
-        {doc.descricao || "Sem descrição adicional."}
-      </p>
-      {doc.descricao && doc.descricao.length > 140 ? (
-        <button
-          type="button"
-          className="self-start text-xs font-semibold text-brand hover:underline"
-          onClick={onExpandir}
-        >
-          {expandida ? "Ver menos" : "Ver mais"}
-        </button>
-      ) : null}
-
-      <div className="mt-1 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-2">
-        {rodapeMeta}
-        <div className="flex shrink-0 items-center gap-1">
-          {menuMais}
-          {botaoBaixar}
-          {botaoVisualizar}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function FormularioDocumento({
-  aberto,
-  documento,
-  onFechar,
-  onSalvo,
-}: {
-  aberto: boolean;
-  documento: Documento | null;
-  onFechar: () => void;
-  onSalvo: () => void;
-}) {
-  const [modo, setModo] = useState<"upload" | "link">("upload");
-  const [titulo, setTitulo] = useState("");
-  const [categoria, setCategoria] = useState<string>(CATEGORIAS[0]);
-  const [codigoProduto, setCodigoProduto] = useState("");
-  const [versao, setVersao] = useState("");
-  const [dataVigencia, setDataVigencia] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [url, setUrl] = useState("");
-  const [arquivo, setArquivo] = useState<File | null>(null);
-  const [erroArquivo, setErroArquivo] = useState<string | null>(null);
-  const [salvando, setSalvando] = useState(false);
-  const [enviandoArquivo, setEnviandoArquivo] = useState(false);
-  const inputArquivo = useRef<HTMLInputElement>(null);
-  const idCarregado = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!aberto) {
-      idCarregado.current = null;
-      return;
-    }
-
-    const chave = documento?.id ?? "novo";
-    if (idCarregado.current === chave) return;
-
-    idCarregado.current = chave;
-    setTitulo(documento?.titulo ?? "");
-    setCategoria(documento?.categoria ?? CATEGORIAS[0]);
-    setCodigoProduto(documento?.codigo_produto ?? "");
-    setVersao(documento?.versao ?? "");
-    setDataVigencia(documento?.data_vigencia ?? "");
-    setDescricao(documento?.descricao ?? "");
-    setUrl(documento?.url ?? "");
-    setArquivo(null);
-    setErroArquivo(null);
-    setModo(documento?.tipo === "link" ? "link" : "upload");
-  }, [aberto, documento]);
-
-  function escolherArquivo(selecionado: File | null) {
-    if (!selecionado) {
-      setArquivo(null);
-      setErroArquivo(null);
-      return;
-    }
-    const ehPdf =
-      selecionado.type === "application/pdf" || /\.pdf$/i.test(selecionado.name);
-    if (!ehPdf) {
-      setErroArquivo("Envie um arquivo em PDF.");
-      setArquivo(null);
-      return;
-    }
-    if (selecionado.size > LIMITE_BYTES) {
-      setErroArquivo(
-        `Esse arquivo tem ${formatarTamanho(selecionado.size)} e o limite é 50 MB. Reduza o PDF ou cadastre pelo link.`,
-      );
-      setArquivo(null);
-      return;
-    }
-    setErroArquivo(null);
-    setArquivo(selecionado);
-  }
-
-  async function salvar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!titulo.trim()) {
-      toast.error("Informe o título do documento.");
-      return;
-    }
-
-    setSalvando(true);
-    try {
-      const { data: sessao } = await supabase.auth.getUser();
-      const userId = sessao.user?.id;
-      if (!userId) throw new Error("Sessão expirada. Entre novamente.");
-
-      const campos: Partial<Documento> = {
-        titulo: titulo.trim(),
-        categoria,
-        codigo_produto: codigoProduto.trim() || null,
-        versao: versao.trim() || null,
-        data_vigencia: dataVigencia || null,
-        descricao: descricao.trim() || null,
-      };
-
-      /* Guardado para apagar o PDF antigo só depois que a gravação der certo. */
-      let caminhoAntigo: string | null = null;
-
-      if (modo === "link") {
-        const enderecoLimpo = url.trim();
-        let endereco: URL;
-        try {
-          endereco = new URL(enderecoLimpo);
-        } catch {
-          throw new Error("Informe um link válido, começando com https://");
-        }
-        if (!/^https?:$/.test(endereco.protocol)) {
-          throw new Error("O link precisa começar com http:// ou https://");
-        }
-        if (documento?.tipo === "file" && documento.storage_path) {
-          caminhoAntigo = documento.storage_path;
-        }
-        campos.tipo = "link";
-        campos.url = enderecoLimpo;
-        campos.storage_path = null;
-        campos.file_name = null;
-        campos.file_size = null;
-      } else {
-        const jaTemArquivo = documento?.tipo === "file" && Boolean(documento.storage_path);
-        if (!arquivo && !jaTemArquivo) {
-          throw new Error("Escolha o arquivo PDF que será enviado.");
-        }
-        if (arquivo) {
-          setEnviandoArquivo(true);
-          const caminho = `${userId}/${crypto.randomUUID()}-${arquivo.name}`;
-          const { error: erroUpload } = await supabase.storage
-            .from("documentos")
-            .upload(caminho, arquivo, { contentType: "application/pdf" });
-          setEnviandoArquivo(false);
-          if (erroUpload) {
-            throw new Error(`Não foi possível enviar o arquivo: ${erroUpload.message}`);
-          }
-          if (jaTemArquivo) caminhoAntigo = documento!.storage_path!;
-          campos.tipo = "file";
-          campos.storage_path = caminho;
-          campos.file_name = arquivo.name;
-          campos.file_size = arquivo.size;
-          campos.url = null;
-        }
-      }
-
-      if (documento) {
-        const { error } = await supabase.from("documentos").update(campos).eq("id", documento.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("documentos")
-          .insert({ ...campos, titulo: campos.titulo!, created_by: userId });
-        if (error) throw error;
-      }
-
-      if (caminhoAntigo) {
-        await supabase.storage.from("documentos").remove([caminhoAntigo]);
-      }
-
-      toast.success(documento ? "Documento atualizado." : "Documento salvo no catálogo.");
-      onSalvo();
-    } catch (err) {
-      const mensagem = err instanceof Error ? err.message : "Não foi possível salvar.";
-      console.error("Salvar documento falhou:", err);
-      toast.error(mensagem);
-    } finally {
-      setEnviandoArquivo(false);
-      setSalvando(false);
-    }
-  }
-
-  return (
-    <Dialog open={aberto} onOpenChange={(o) => !o && !salvando && onFechar()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto border-t-[3px] border-t-gold sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-display">
-            {documento ? "Editar documento" : "Adicionar documento"}
-          </DialogTitle>
-          <DialogDescription>
-            Envie o PDF direto ou cole o link de um arquivo já hospedado.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="grid grid-cols-2 gap-1 rounded-sm bg-secondary p-1">
-          {(["upload", "link"] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setModo(m)}
-              aria-pressed={modo === m}
-              className={`rounded-sm py-2 text-xs font-semibold transition-colors ${
-                modo === m
-                  ? "bg-card text-brand shadow-sm"
-                  : "text-muted-foreground hover:text-brand"
-              }`}
-            >
-              {m === "upload" ? "Enviar arquivo" : "Colar link"}
-            </button>
-          ))}
-        </div>
-
-        <form onSubmit={salvar} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="titulo">Título do documento</Label>
-            <Input
-              id="titulo"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Ex: Manual de instalação — Visor Linha Truck"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="categoria">Categoria</Label>
-            <Select value={categoria} onValueChange={setCategoria}>
-              <SelectTrigger id="categoria">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIAS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="codigo-produto">Código / modelo</Label>
-              <Input
-                id="codigo-produto"
-                value={codigoProduto}
-                onChange={(e) => setCodigoProduto(e.target.value)}
-                placeholder="Ex: SVB-TRK-08"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="versao">Versão / revisão</Label>
-              <Input
-                id="versao"
-                value={versao}
-                onChange={(e) => setVersao(e.target.value)}
-                placeholder="Ex: Rev. 03"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="data-vigencia">Vigente até (opcional)</Label>
-            <Input
-              id="data-vigencia"
-              type="date"
-              value={dataVigencia}
-              onChange={(e) => setDataVigencia(e.target.value)}
-            />
-          </div>
-
-          {modo === "upload" ? (
-            <div className="space-y-1.5">
-              <Label>Arquivo PDF</Label>
-              <input
-                ref={inputArquivo}
-                type="file"
-                accept="application/pdf,.pdf"
-                className="hidden"
-                onChange={(e) => escolherArquivo(e.target.files?.[0] ?? null)}
-              />
-              {arquivo ? (
-                <div className="flex items-center gap-3 rounded-sm border border-border p-3">
-                  <FileText className="h-5 w-5 flex-shrink-0 text-brand" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{arquivo.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatarTamanho(arquivo.size)}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                    aria-label="Remover arquivo selecionado"
-                    onClick={() => {
-                      escolherArquivo(null);
-                      if (inputArquivo.current) inputArquivo.current.value = "";
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => inputArquivo.current?.click()}
-                  className="w-full rounded-sm border-[1.5px] border-dashed border-border px-4 py-6 text-center transition-colors hover:border-gold hover:bg-gold/5"
-                >
-                  <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
-                  <p className="mt-2 text-sm font-medium text-muted-foreground">
-                    Clique para escolher o PDF
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground/70">
-                    {documento?.tipo === "file" && documento.file_name
-                      ? `Atual: ${documento.file_name} — envie outro para substituir`
-                      : "Tamanho máximo: 50 MB"}
-                  </p>
-                </button>
-              )}
-              {erroArquivo ? (
-                <p className="text-xs font-medium text-destructive">{erroArquivo}</p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="url">Link do PDF</Label>
-              <Input
-                id="url"
-                type="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://..."
-              />
-              <p className="text-xs text-muted-foreground/70">
-                O link deve abrir o PDF diretamente.
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="descricao">Descrição (opcional)</Label>
-            <Textarea
-              id="descricao"
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="Breve nota sobre o conteúdo do documento"
-              className="min-h-16"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="outline" onClick={onFechar} disabled={salvando}>
-              Cancelar
-            </Button>
-            <Button type="submit" className="font-semibold" disabled={salvando}>
-              {enviandoArquivo
-                ? "Enviando arquivo..."
-                : salvando
-                  ? "Salvando..."
-                  : "Salvar documento"}
+              {enviandoArquivo ? "Enviando arquivo..." : salvando ? "Salvando..." : "Salvar documento"}
             </Button>
           </div>
         </form>
@@ -1912,8 +1536,7 @@ function HistoricoDocumento({
   if (versoes.length === 0) {
     return (
       <p className="py-6 text-sm text-muted-foreground">
-        Nenhuma versão anterior foi registrada; a próxima edição criará a primeira
-        versão aqui.
+        Nenhuma versão anterior foi registrada; a próxima edição criará a primeira versão aqui.
       </p>
     );
   }
@@ -1931,9 +1554,7 @@ function HistoricoDocumento({
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold">Versão {versao.versao}</p>
               <div className="flex items-center gap-2">
-                <time className="text-xs text-muted-foreground">
-                  {formatarData(versao.criado_em)}
-                </time>
+                <time className="text-xs text-muted-foreground">{formatarData(versao.criado_em)}</time>
                 {podeRestaurar ? (
                   <Button
                     type="button"
@@ -2003,7 +1624,6 @@ function ImportacaoLote({
       const userId = sessao.user?.id;
       if (!userId) throw new Error("Sessão expirada. Entre novamente.");
 
-      /* Um arquivo com problema não derruba a importação inteira. */
       for (const arquivo of arquivos) {
         const caminho = `${userId}/${crypto.randomUUID()}-${arquivo.name}`;
         const { error: erroUpload } = await supabase.storage
@@ -2056,9 +1676,7 @@ function ImportacaoLote({
       <DialogContent className="max-h-[90dvh] overflow-y-auto border-t-[3px] border-t-gold sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-display">Importar PDFs</DialogTitle>
-          <DialogDescription>
-            Adicione vários manuais de uma vez. O nome do arquivo vira o título.
-          </DialogDescription>
+          <DialogDescription>Adicione vários manuais de uma vez. O nome do arquivo vira o título.</DialogDescription>
         </DialogHeader>
         <form onSubmit={importar} className="space-y-4">
           <input
@@ -2076,9 +1694,7 @@ function ImportacaoLote({
           >
             <UploadCloud className="mx-auto h-6 w-6 text-muted-foreground" />
             <p className="mt-2 text-sm font-medium text-muted-foreground">
-              {arquivos.length
-                ? `${arquivos.length} arquivo(s) selecionado(s)`
-                : "Selecionar PDFs"}
+              {arquivos.length ? `${arquivos.length} arquivo(s) selecionado(s)` : "Selecionar PDFs"}
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground/70">Até 50 MB por arquivo</p>
           </button>
@@ -2086,14 +1702,9 @@ function ImportacaoLote({
           {arquivos.length > 0 ? (
             <ul className="max-h-36 space-y-1 overflow-y-auto rounded-sm border border-border p-2">
               {arquivos.map((arquivo) => (
-                <li
-                  key={`${arquivo.name}-${arquivo.size}`}
-                  className="flex items-center justify-between gap-2 text-xs"
-                >
+                <li key={`${arquivo.name}-${arquivo.size}`} className="flex items-center justify-between gap-2 text-xs">
                   <span className="min-w-0 truncate">{arquivo.name}</span>
-                  <span className="shrink-0 text-muted-foreground">
-                    {formatarTamanho(arquivo.size)}
-                  </span>
+                  <span className="shrink-0 text-muted-foreground">{formatarTamanho(arquivo.size)}</span>
                 </li>
               ))}
             </ul>
