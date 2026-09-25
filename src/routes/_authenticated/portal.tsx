@@ -1319,7 +1319,13 @@ function FormularioDocumento({
     setTitulo(documento?.titulo ?? "");
     setCategoria(documento?.categoria ?? CATEGORIAS[0]);
     setCodigoProduto(documento?.codigo_produto ?? "");
-    setVersao(documento?.versao ?? "");
+    
+    if (documento?.versao) {
+      setVersao(documento.versao);
+    } else {
+      setVersao("01");
+    }
+
     setDataVigencia(documento?.data_vigencia ?? "");
     setDescricao(documento?.descricao ?? "");
     setUrl(documento?.url ?? "");
@@ -1348,8 +1354,17 @@ function FormularioDocumento({
       setArquivo(null);
       return;
     }
+    
     setErroArquivo(null);
     setArquivo(selecionado);
+
+    if (documento?.versao) {
+      const numeroAtual = parseInt(documento.versao.replace(/\D/g, ""), 10);
+      if (!isNaN(numeroAtual)) {
+        const proximaRev = String(numeroAtual + 1).padStart(2, "0");
+        setVersao(proximaRev);
+      }
+    }
   }
 
   async function salvar(e: React.FormEvent) {
@@ -1365,16 +1380,20 @@ function FormularioDocumento({
       const userId = sessao.user?.id;
       if (!userId) throw new Error("Sessão expirada. Entre novamente.");
 
+      let versaoFormatada = versao.trim();
+      if (/^\d+$/.test(versaoFormatada)) {
+        versaoFormatada = versaoFormatada.padStart(2, "0");
+      }
+
       const campos: Partial<Documento> = {
         titulo: titulo.trim(),
         categoria,
         codigo_produto: codigoProduto.trim() || null,
-        versao: versao.trim() || null,
+        versao: versaoFormatada || "01",
         data_vigencia: dataVigencia || null,
         descricao: descricao.trim() || null,
       };
 
-      /* Guardado para apagar o PDF antigo só depois que a gravação der certo. */
       let caminhoAntigo: string | null = null;
 
       if (modo === "link") {
@@ -1519,7 +1538,7 @@ function FormularioDocumento({
                 id="versao"
                 value={versao}
                 onChange={(e) => setVersao(e.target.value)}
-                placeholder="Ex: Rev. 03"
+                placeholder="Ex: 01, 02..."
               />
             </div>
           </div>
